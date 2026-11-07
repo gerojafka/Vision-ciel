@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Télescope de Newton — Simulation</title>
+<meta name="description" content="Simulation interactive du télescope de Newton : marche des rayons, démonstration du grossissement G = f₁/f₂, construction pas à pas.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Crect%20width%3D%2764%27%20height%3D%2764%27%20rx%3D%2714%27%20fill%3D%27%2304080f%27/%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2718%27%20fill%3D%27none%27%20stroke%3D%27%2343e0b8%27%20stroke-width%3D%275%27/%3E%3Cpath%20d%3D%27M14%2032h36%27%20stroke%3D%27%2343e0b8%27%20stroke-width%3D%273%27%20stroke-dasharray%3D%275%203%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#04080f; --panel:#0a1426; --line:rgba(110,170,255,.16);
+  --ink:#eaf2ff; --mut:#8aa0c4;
+  --amber:#ffb84d; --amber2:#ffd98f; --cyan:#5fd9ff; --teal:#43e0b8; --coral:#ff7a59; --sol:#ffd24a;
+  --disp:'Unbounded',sans-serif; --body:'Space Grotesk',sans-serif; --mono:'Space Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--body);color:var(--ink);font-size:16px;
+  background:
+    radial-gradient(1000px 640px at 80% -14%, rgba(28,52,110,.5) 0%, transparent 60%),
+    radial-gradient(820px 520px at -8% 110%, rgba(40,90,140,.10) 0%, transparent 55%),
+    var(--bg0);}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;max-width:1560px;margin:0 auto;
+  height:100vh;height:100dvh;display:flex;flex-direction:column;gap:11px;padding:14px 18px 12px}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+header{flex:none;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:10px;animation:rise .55s .05s both}
+.h-right{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.lang-btn{display:inline-flex;align-items:center;gap:7px;font:700 11px var(--mono);letter-spacing:.14em;
+  padding:6px 13px;border:1px solid rgba(95,217,255,.4);border-radius:20px;background:rgba(95,217,255,.07);
+  color:var(--cyan);cursor:pointer;transition:.2s;text-transform:uppercase}
+.lang-btn:hover{background:rgba(95,217,255,.16);box-shadow:0 0 14px rgba(95,217,255,.3);transform:translateY(-1px)}
+.lg-globe{font-size:13px}
+.overline{font:400 13px var(--mono);letter-spacing:.3em;color:var(--mut);text-transform:uppercase;display:flex;align-items:center;gap:9px}
+.overline::before{content:'';width:7px;height:7px;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+h1{font-family:var(--disp);font-weight:900;font-size:clamp(20px,2.3vw,29px);letter-spacing:.02em;margin-top:5px;line-height:1}
+h1 span{color:var(--cyan);text-shadow:0 0 22px rgba(95,217,255,.45)}
+.tabs{display:flex;gap:6px}
+.tabs button{position:relative;background:none;border:1px solid transparent;border-radius:6px;cursor:pointer;
+  padding:6px 16px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;transition:.22s}
+.tabs .num{font:700 17px var(--disp);color:var(--mut);transition:.22s}
+.tabs .lbl{font:400 12.5px var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+.tabs button::after{content:'';position:absolute;left:14%;right:14%;bottom:3px;height:2px;background:var(--cyan);
+  transform:scaleX(0);transform-origin:left;transition:transform .3s;box-shadow:0 0 8px var(--cyan)}
+.tabs button:hover{background:rgba(110,170,255,.06)}
+.tabs button:hover .num{color:var(--ink)}
+.tabs button.active .num{color:var(--cyan)} .tabs button.active .lbl{color:var(--ink)}
+.tabs button.active::after{transform:scaleX(1)}
+.tabs button:focus{outline:none}.tabs button:focus-visible{border-color:rgba(95,217,255,.4)}
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px}
+
+.stage{min-height:0;display:flex;flex-direction:column;gap:10px;animation:rise .55s .15s both}
+.viewport{position:relative;flex:1;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:10px;
+  background:linear-gradient(180deg,rgba(8,18,34,.55),rgba(3,7,14,.88));box-shadow:inset 0 0 90px rgba(2,5,12,.9)}
+.viewport::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px)}
+#sim{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.ck{position:absolute;width:15px;height:15px;border:0 solid var(--cyan);opacity:.8;pointer-events:none;z-index:3}
+.ck.tl{top:9px;left:9px;border-top-width:2px;border-left-width:2px}
+.ck.tr{top:9px;right:9px;border-top-width:2px;border-right-width:2px}
+.ck.bl{bottom:9px;left:9px;border-bottom-width:2px;border-left-width:2px}
+.ck.br{bottom:9px;right:9px;border-bottom-width:2px;border-right-width:2px}
+.hud{position:absolute;z-index:2;pointer-events:none}
+.hud-top{top:16px;left:20px;max-width:380px}
+.title-row{display:flex;align-items:baseline;gap:26px;flex-wrap:wrap}
+.def-inline{position:relative;font:700 18px var(--disp);line-height:1;color:var(--ink);cursor:help;
+  pointer-events:auto;transition:color .2s,text-shadow .2s;white-space:nowrap}
+.def-inline:hover{color:var(--cyan);text-shadow:0 0 18px rgba(95,217,255,.4)}
+.def-pop{position:absolute;top:calc(100% + 10px);left:0;width:340px;padding:11px 14px;z-index:6;
+  border:1px solid rgba(95,217,255,.4);border-radius:8px;background:rgba(8,12,22,.97);
+  box-shadow:0 8px 30px rgba(0,0,0,.5);color:var(--mut);font:400 13px/1.5 var(--body);
+  opacity:0;transform:translateY(-4px);transition:.2s;pointer-events:none;white-space:normal}
+.def-inline:hover .def-pop{opacity:1;transform:none}
+.law-k{font:700 13px var(--mono);letter-spacing:.3em;color:var(--cyan)}
+.law-t{font:700 18px var(--disp);margin:5px 0 4px;line-height:1.1}
+.law-d{font-size:13.5px;line-height:1.4;color:var(--mut);max-width:380px}
+
+.tip{position:absolute;z-index:5;pointer-events:none;width:280px;padding:9px 12px;border:1px solid rgba(95,217,255,.45);
+  border-radius:8px;background:rgba(5,10,20,.96);box-shadow:0 8px 26px rgba(0,0,0,.55);
+  opacity:0;transition:opacity .12s;font:400 13px/1.45 var(--body);color:var(--mut)}
+.tip.on{opacity:1}
+.tip b{display:block;font:700 13px var(--mono);color:var(--cyan);margin-bottom:3px;letter-spacing:.02em}
+.tip em{display:block;margin-top:5px;font:700 11.5px var(--mono);font-style:normal;color:var(--amber2);letter-spacing:.05em}
+
+.hud-flash{left:50%;bottom:14px;transform:translate(-50%,6px);font:700 12px var(--mono);letter-spacing:.08em;
+  color:var(--teal);opacity:0;transition:.35s;text-align:center;white-space:nowrap;max-width:90%;
+  padding:5px 12px;border-radius:20px;background:rgba(4,9,18,.85);border:1px solid rgba(67,224,184,.3)}
+.hud-flash.on{opacity:1;transform:translate(-50%,0)}
+.hud-indicator{top:18px;right:20px;display:flex;align-items:center;gap:8px;font:700 11.5px var(--mono);
+  letter-spacing:.1em;padding:6px 12px;border:1px solid var(--line);border-radius:20px;background:rgba(4,8,16,.6);text-transform:uppercase}
+.ind-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.hud-indicator.run{color:var(--teal);border-color:rgba(67,224,184,.4)}
+.run .ind-dot{background:var(--teal);box-shadow:0 0 8px var(--teal);animation:blink 1.4s infinite}
+.hud-indicator.low{color:var(--amber2);border-color:rgba(255,184,77,.4)}
+.low .ind-dot{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.hud-indicator.warn{color:var(--coral);border-color:rgba(255,122,89,.4)}
+.warn .ind-dot{background:var(--coral);box-shadow:0 0 8px var(--coral)}
+.zoom-btn{position:absolute;right:16px;bottom:14px;z-index:4;display:inline-flex;align-items:center;gap:6px;font:700 11px var(--mono);letter-spacing:.1em;padding:7px 12px;border:1px solid rgba(95,217,255,.4);border-radius:20px;background:rgba(4,9,18,.85);color:var(--cyan);cursor:pointer;transition:.2s;text-transform:uppercase}
+.zoom-btn:hover{background:rgba(95,217,255,.16);box-shadow:0 0 14px rgba(95,217,255,.3)}
+.zoom-btn.on{border-color:var(--amber);color:var(--amber2);background:rgba(40,28,8,.85)}
+
+.dock{flex:none;display:flex;gap:12px;height:140px}
+.dock.compact{height:auto}
+.card{border:1px solid var(--line);border-radius:10px;background:linear-gradient(180deg,rgba(11,20,38,.9),rgba(6,11,22,.9))}
+.step-card{flex:1;min-width:0;display:flex;align-items:center;gap:18px;padding:10px 16px}
+.step-card[hidden]{display:none}
+.step-text{flex:1;min-width:0;max-height:100%;overflow-y:auto;text-align:center;scrollbar-width:thin}
+.step-text .st-t{font:700 14px var(--mono);color:var(--cyan);letter-spacing:.04em}
+.step-text .st-d{font-size:14px;line-height:1.5;color:var(--mut);margin-top:5px}
+.step-text .st-d.formula{font:italic 17px/1.35 Georgia,"Times New Roman",serif;color:var(--ink)}
+.st-note{display:inline-block;vertical-align:middle;max-width:160px;margin-left:18px;padding-left:12px;border-left:1px solid var(--line);text-align:left;font:400 12.5px/1.4 var(--body);font-style:normal;color:var(--amber2)}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 4px}
+.frac .num{padding:0 5px}
+.frac .den{padding:1px 5px 0;border-top:1px solid var(--mut)}
+.step-nav{flex:none;display:flex;flex-direction:column;align-items:stretch;gap:7px;width:210px}
+.step-nav .row{display:flex;gap:6px}
+.step-nav .row .btn{flex:1;padding:7px 8px}
+.step-count{font:700 12px var(--mono);letter-spacing:.12em;color:var(--amber2);text-align:center}
+.step-dots{display:flex;justify-content:center;gap:4px;flex-wrap:wrap}
+.step-dots span{width:7px;height:7px;border-radius:50%;background:rgba(110,170,255,.25);cursor:pointer;transition:.2s}
+.step-dots span.done{background:rgba(95,217,255,.55)}
+.step-dots span.cur{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.readouts{flex:none;width:300px;display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;padding:14px 18px;align-content:center}
+.dock.compact .readouts{flex:1;width:auto;display:flex;flex-wrap:wrap;gap:12px 40px;padding:12px 20px}
+.stat{display:flex;flex-direction:column;gap:5px}
+.s-l{font:400 12px/1 var(--mono);letter-spacing:.06em;color:var(--mut)}
+.s-v{font:700 16px/1 var(--mono);white-space:nowrap}
+.s-v.amb{color:var(--amber2)} .s-v.cyn{color:var(--cyan)} .s-v.tea{color:var(--teal)} .s-v.ink{color:var(--ink)} .s-v.cor{color:var(--coral)}
+
+.panel{min-height:0;border:1px solid var(--line);border-radius:10px;
+  background:linear-gradient(180deg,rgba(11,20,38,.9),rgba(6,11,22,.9));
+  padding:13px 14px 11px;display:flex;flex-direction:column;gap:13px;animation:rise .55s .25s both;
+  overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(95,217,255,.4) transparent}
+.panel::-webkit-scrollbar{width:6px}
+.panel::-webkit-scrollbar-thumb{background:rgba(95,217,255,.35);border-radius:3px}
+.panel::-webkit-scrollbar-track{background:transparent}
+.p-head{display:flex;align-items:center;gap:10px}
+.p-head b{font:700 13px var(--mono);letter-spacing:.22em;color:var(--mut);white-space:nowrap}
+.p-line{flex:1;height:1px;background:var(--line)}
+.ctl{margin-top:8px;transition:opacity .25s}
+.ctl.off{opacity:.35}
+.ctl.off input{pointer-events:none}
+.ctl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:1px}
+.ctl-top label{font-size:16.25px;color:var(--ink)}
+.ctl-top label i{font-style:italic;font-family:var(--mono);color:var(--cyan)}
+.ctl-top output{font:700 15px var(--mono);color:var(--amber2)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;
+  background:linear-gradient(90deg,var(--cyan) var(--fill,50%),rgba(110,170,255,.22) var(--fill,50%))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;margin-top:-5px;border-radius:3px;
+  background:#0a1426;border:2px solid var(--cyan);box-shadow:0 0 9px rgba(95,217,255,.55);transition:transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:rgba(110,170,255,.22)}
+input[type=range]::-moz-range-progress{height:3px;border-radius:2px;background:var(--cyan)}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:3px;background:#0a1426;border:2px solid var(--cyan)}
+.hint{font-size:14px;line-height:1.45;color:var(--mut);margin-top:9px;padding:7px 10px;border-left:2px solid var(--cyan);background:rgba(95,217,255,.05)}
+.hint i{font-family:var(--mono);color:var(--cyan)} .hint b{color:var(--amber2)}
+.led{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 9px var(--teal);animation:blink 1.5s infinite;flex:none}
+.led.paused{background:var(--amber);box-shadow:0 0 9px var(--amber);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.anim-row{display:flex;gap:7px}
+.anim-row .btn{flex:1}
+.btn{font:700 12.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:9px 10px;border-radius:6px;
+  border:1px solid var(--line);background:rgba(110,170,255,.06);color:var(--ink);cursor:pointer;transition:.2s}
+.btn:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 12px rgba(95,217,255,.15);transform:translateY(-1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;border-color:var(--line);color:var(--ink)}
+.btn[hidden]{display:none}
+.btn-primary{background:var(--cyan);border-color:var(--cyan);color:#04121a}
+.btn-primary:hover{background:#9be8ff;color:#04121a;box-shadow:0 0 16px rgba(95,217,255,.4)}
+.btn-primary:disabled{background:var(--cyan);color:#04121a}
+.btn.on{border-color:var(--amber);color:var(--amber2);background:rgba(255,184,77,.1);box-shadow:inset 0 0 10px rgba(255,184,77,.12)}
+.tgl{display:flex;align-items:center;gap:10px;font-size:15.5px;color:var(--mut);cursor:pointer;padding:4px 0;transition:color .2s}
+.tgl:hover{color:var(--ink)}
+.tgl input{display:none}
+.tgl .sw{width:30px;height:16px;border:1px solid var(--line);border-radius:9px;position:relative;flex:none;background:rgba(110,170,255,.08);transition:.25s}
+.tgl .sw::after{content:'';position:absolute;left:2px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--mut);transition:.25s}
+.tgl input:checked+.sw{background:rgba(95,217,255,.18);border-color:var(--cyan)}
+.tgl input:checked+.sw::after{left:16px;background:var(--cyan);box-shadow:0 0 6px rgba(95,217,255,.7)}
+.tgl .tx{line-height:1.2;flex:1}
+.p-note{margin-top:auto;padding-top:10px;border-top:1px solid var(--line);font:400 13px var(--mono);letter-spacing:.04em;color:var(--mut)}
+.p-note b{color:var(--amber2)}
+@media (max-height:760px){
+  .law-d{display:none}.hud-top{max-width:300px}
+  .hint{display:none}.app{padding:10px 14px 8px;gap:8px}.panel{gap:10px;padding:10px 12px 8px}
+  h1{font-size:clamp(18px,2vw,23px)}
+  .dock{height:126px}.step-text .st-d{font-size:13px}.step-text .st-d.formula{font-size:15px}
+}
+@media (max-width:1020px){
+  html,body{overflow:auto}.app{height:auto}main{grid-template-columns:1fr}
+  .viewport{flex:none;height:60vh;min-height:420px}.panel{height:auto;overflow:visible}.h-right{align-items:flex-start}
+  .dock{height:auto;flex-wrap:wrap}.step-card{flex-basis:100%;flex-wrap:wrap}.step-nav{width:100%}
+  .readouts{width:100%}
+  .hud-top{max-width:300px}
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="app">
+  <header>
+    <div class="h-left">
+      <div class="overline" data-i18n="overline">Optique géométrique · télescope de Newton</div>
+      <h1 data-i18n-html="h1">TÉLESCOPE <span>DE NEWTON</span></h1>
+    </div>
+    <div class="h-right">
+      <button class="lang-btn" id="lang" title="FR / EN"><span class="lg-globe">🌐</span><span id="lang-lbl">EN · English</span></button>
+      <nav class="tabs" aria-label="view">
+        <button data-view="1" class="active"><span class="num">01</span><span class="lbl" data-i18n="tab1">Rayons</span></button>
+        <button data-view="2"><span class="num">02</span><span class="lbl" data-i18n="tab2">Grossissement</span></button>
+        <button data-view="3"><span class="num">03</span><span class="lbl" data-i18n="tab3">Pas à pas</span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="stage">
+      <section class="viewport" id="viewport">
+        <span class="ck tl"></span><span class="ck tr"></span><span class="ck bl"></span><span class="ck br"></span>
+        <canvas id="sim"></canvas>
+
+        <div class="hud hud-top" id="hud-top">
+          <div class="law-k" id="law-k">VUE 01</div>
+          <div class="title-row">
+            <span class="def-inline" id="def-inline"><span data-i18n="def_btn">Définition</span><span class="def-pop" id="def-pop" data-i18n="def_txt"></span></span>
+            <div class="law-t" id="law-t"></div>
+          </div>
+          <div class="law-d" id="law-d"></div>
+        </div>
+
+        <div class="tip" id="tip"></div>
+        <div class="hud hud-indicator low" id="ind"><span class="ind-dot"></span><span id="ind-txt"></span></div>
+        <div class="hud hud-flash" id="flash"></div>
+        <button class="zoom-btn" id="btn-zoom"><span id="zoom-lbl">🔍 Zoom oculaire</span></button>
+      </section>
+
+      <div class="dock" id="dock">
+        <div class="card step-card" id="hud-step" hidden>
+          <div class="step-text"><div class="st-t" id="step-text-t"></div><div class="st-d" id="step-text-d"></div></div>
+          <div class="step-nav">
+            <span class="step-count" id="step-count"></span>
+            <div class="step-dots" id="step-dots"></div>
+            <div class="row">
+              <button class="btn" id="step-prev"><span data-i18n="step_prev">◀ Préc</span></button>
+              <button class="btn" id="step-next"><span data-i18n="step_next">Suiv ▶</span></button>
+            </div>
+            <div class="row">
+              <button class="btn btn-primary" id="step-auto"><span id="step-auto-lbl">▶ Auto</span></button>
+              <button class="btn btn-primary" id="step-replay" hidden><span data-i18n="step_replay">↻ Glisser L₂</span></button>
+            </div>
+          </div>
+        </div>
+        <div class="card readouts" id="readouts"></div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div>
+        <div class="p-head"><b data-i18n="sec_opt">OPTIQUE</b><span class="p-line"></span></div>
+        <div class="ctl">
+          <div class="ctl-top"><label for="sl-f1" data-i18n-html="lbl_f1">Focale du miroir <i>f₁</i></label><output id="out-f1">600 mm</output></div>
+          <input type="range" id="sl-f1" min="300" max="1200" step="10" value="600" aria-label="f1">
+        </div>
+        <div class="ctl">
+          <div class="ctl-top"><label for="sl-f2" data-i18n-html="lbl_f2">Focale de l’oculaire <i>f₂</i></label><output id="out-f2">40 mm</output></div>
+          <input type="range" id="sl-f2" min="10" max="80" step="1" value="40" aria-label="f2">
+        </div>
+      </div>
+
+      <div>
+        <div class="p-head"><b data-i18n="sec_obs">OBSERVATION</b><span class="p-line"></span></div>
+        <div class="ctl">
+          <div class="ctl-top"><label for="sl-a" data-i18n-html="lbl_alpha">Inclinaison de l’astre <i>α</i></label><output id="out-a">1,50°</output></div>
+          <input type="range" id="sl-a" min="-2" max="2" step="0.25" value="1.5" aria-label="alpha">
+        </div>
+        <div class="ctl" id="ctl-focus">
+          <div class="ctl-top"><label for="sl-focus" data-i18n="lbl_focus">Mise au point (oculaire)</label><output id="out-focus">0 mm</output></div>
+          <input type="range" id="sl-focus" min="-15" max="15" step="1" value="0" aria-label="focus">
+        </div>
+        <p class="hint" id="hint"></p>
+      </div>
+
+      <div>
+        <div class="p-head"><b data-i18n="sec_anim">ANIMATION</b><span class="p-line"></span><span class="led paused" id="led"></span></div>
+        <div class="anim-row" style="margin-top:9px">
+          <button class="btn btn-primary" id="btn-play">▶ Lecture</button>
+          <button class="btn" id="btn-reset">⟲ Réinit.</button>
+          <button class="btn" id="btn-fast">⏩ Démo</button>
+        </div>
+        <div class="ctl">
+          <div class="ctl-top"><label for="sl-sp" data-i18n="lbl_speed">Vitesse</label><output id="out-sp">×1,00</output></div>
+          <input type="range" id="sl-sp" min="0.25" max="4" step="0.25" value="1" aria-label="speed">
+        </div>
+      </div>
+
+      <div>
+        <div class="p-head"><b data-i18n="sec_disp">AFFICHAGE</b><span class="p-line"></span></div>
+        <div style="margin-top:6px">
+          <label class="tgl"><input type="checkbox" id="tg-ray" checked><span class="sw"></span><span class="tx" data-i18n="tg_ray">Rayons lumineux</span></label>
+          <label class="tgl"><input type="checkbox" id="tg-foci" checked><span class="sw"></span><span class="tx" data-i18n="tg_foci">Foyers & images intermédiaires</span></label>
+          <label class="tgl"><input type="checkbox" id="tg-tube" checked><span class="sw"></span><span class="tx" data-i18n="tg_tube">Tube du télescope</span></label>
+          <label class="tgl"><input type="checkbox" id="tg-eye" checked><span class="sw"></span><span class="tx" data-i18n="tg_eye">Œil & vue oculaire</span></label>
+          <label class="tgl"><input type="checkbox" id="tg-phot" checked><span class="sw"></span><span class="tx" data-i18n="tg_phot">Photons</span></label>
+          <label class="tgl"><input type="checkbox" id="tg-tip" checked><span class="sw"></span><span class="tx" data-i18n="tg_tip">Infobulles au survol</span></label>
+        </div>
+      </div>
+
+      <p class="p-note" data-i18n-html="note"><b>G = f₁ ⁄ f₂</b> · image renversée · afocal si F₁′ = F₂</p>
+    </aside>
+  </main>
+</div>
+
+<script>
+'use strict';
+var TAU=Math.PI*2, DEG=Math.PI/180;
+var FONTGEO='italic 14px Georgia,"Times New Roman",serif';
+var FONTGEOB='italic 18px Georgia,"Times New Roman",serif';
+var MONO='"Space Mono",monospace';
+var AMAX=2;          /* max tilt of the star (deg) — sets tube & secondary size */
+var STEP_M2=5, STEP_L2=6;
+var CAM={k:1,tx:0,ty:0}, LWS=1, FZS=1;
+function fz(f){return FZS===1?f:f.replace(/(\d+(?:\.\d+)?)px/,function(m,n){return (n*FZS).toFixed(1)+'px';});}
+
+/* ================= i18n ================= */
+function FR(a,b){return '<span class="frac"><span class="num">'+a+'</span><span class="den">'+b+'</span></span>';}
+var T={
+ fr:{
+  overline:'Optique géométrique · télescope de Newton', h1:'TÉLESCOPE <span>DE NEWTON</span>',
+  tab1:'Rayons', tab2:'Grossissement', tab3:'Pas à pas',
+  sec_opt:'OPTIQUE', sec_obs:'OBSERVATION', sec_anim:'ANIMATION', sec_disp:'AFFICHAGE',
+  lbl_f1:'Focale du miroir <i>f₁</i>', lbl_f2:'Focale de l’oculaire <i>f₂</i>',
+  lbl_alpha:'Inclinaison de l’astre <i>α</i>', lbl_focus:'Mise au point (oculaire)', lbl_speed:'Vitesse',
+  btn_pause:'❚❚ Pause', btn_play:'▶ Lecture', btn_reset:'⟲ Réinit.', btn_demo:'⏩ Démo', btn_end:'⏭ Fin',
+  def_btn:'Définition',
+  def_txt:'Le télescope de Newton est un système afocal à miroirs : un miroir primaire concave M₁, un petit miroir secondaire plan M₂ incliné à 45° et un oculaire L₂. D’un astre à l’infini, il donne une image également à l’infini.',
+  hint1:'Réglez <i>f₁</i> et <i>f₂</i> : <b>G = f₁/f₂</b>. Faites glisser <b>L₂</b> verticalement (souris ou curseur de mise au point) : à 0 mm le système est afocal. Survolez un élément pour savoir ce qu’il représente.',
+  hint2:'Le miroir plan M₂ conserve la taille de l’image : A₂B₂ = A₁B₁. C’est ce qui relie les deux triangles.',
+  hint3:'Avancez avec <b>Suiv ▶</b> (ou la flèche →). À l’étape 7, faites glisser <b>L₂</b> pour trouver le réglage où les rayons sortent parallèles.',
+  tg_ray:'Rayons lumineux', tg_foci:'Foyers & images intermédiaires', tg_tube:'Tube du télescope', tg_eye:'Œil & vue oculaire', tg_phot:'Photons', tg_tip:'Infobulles au survol',
+  note:'<b>G = f₁ ⁄ f₂</b> · image renversée · afocal si F₁′ = F₂',
+  view_k:'VUE 0{n}',
+  v1_t:'La marche des rayons', v1_d:'Le faisceau venu de l’astre est réfléchi par le miroir concave M₁, puis renvoyé hors du tube par le miroir plan M₂. L’oculaire L₂ observe l’image A₂B₂ et renvoie le faisceau vers l’œil sous l’angle α′.',
+  v2_t:'Démonstration de G', v2_d:'On établit G = f₁/f₂ avec deux triangles rectangles : l’un sur A₁B₁ (miroir M₁), l’autre sur A₂B₂ (oculaire), reliés par le miroir plan M₂.',
+  v3_t:'La construction pas à pas', v3_d:'On construit l’image donnée par M₁, on la sort du tube avec M₂, puis on place l’oculaire et on trace les rayons qui en sortent.',
+  ind_afocal:'AFOCAL · IMAGE À L’INFINI', ind_conv:'F₂ AU-DESSUS DE F₁′ · RAYONS CONVERGENTS', ind_div:'F₂ AU-DESSOUS DE F₁′ · RAYONS DIVERGENTS',
+  ind_step:'PAS À PAS · ÉTAPE {n}/{max}', ind_demo:'DÉMO · ÉTAPE {n}/{max}',
+  ro_f1:'Focale miroir f₁', ro_f2:'Focale ocul. f₂', ro_G:'Grossissement G', ro_b:'Angle α′',
+  ro_a:'Angle α', ro_rap:'f₁/f₂', ro_step:'Étape', ro_gap:'Écart F₁′F₂',
+  u_mm:' mm', u_deg:'°', u_x:'×',
+  w_eye:'œil', w_naked:'ŒIL NU', w_scope:'TÉLESCOPE', w_astre:'astre (∞)', w_axis:'axe optique',
+  w_real:'image réelle', w_virt:'image virtuelle', w_inf:'image à l’∞',
+  st_par:'F₂ = F₁′ → rayons parallèles ✓', st_conv:'F₂ au-dessus de F₁′ → convergents', st_div:'F₂ au-dessous de F₁′ → divergents',
+  step_prev:'◀ Préc', step_next:'Suiv ▶', step_auto:'▶ Auto', step_stop:'❚❚ Stop', step_count:'ÉTAPE {n}/{max}', step_replay:'↻ Glisser L₂',
+  drag:'Glissez verticalement pour déplacer l’oculaire',
+  d0_t:'Triangle SA₁B₁ (miroir M₁)', d1_t:'Le miroir plan M₂', d2_t:'Triangle O₂A₂B₂ (oculaire)', d3_t:'Approximation des petits angles', d4_t:'Le grossissement',
+  d0_f:'tan α = '+FR('A₁B₁','SA₁')+' = '+FR('A₁B₁','f₁'),
+  d1_f:'A₂B₂ est le symétrique de A₁B₁ par rapport au plan de M₂&nbsp;: &nbsp;A₂B₂ = A₁B₁',
+  d2_f:'tan α′ = '+FR('A₂B₂','O₂A₂')+' = '+FR('A₂B₂','f₂'),
+  d3_f:'Pour de petits angles&nbsp;: tan α ≈ α et tan α′ ≈ α′.',
+  d4_f:'G = '+FR('α′','α')+' = '+FR(FR('A₂B₂','f₂'),FR('A₁B₁','f₁'))+' = '+FR('f₁','f₂')+'<span class="st-note">car A₂B₂ = A₁B₁ · l’image est renversée</span>',
+  s0_t:'Le banc optique', s0_d:'On trace l’axe optique, le tube et le miroir primaire concave M₁ (sommet S, foyer F₁). L’astre est à l’infini. Le miroir secondaire et l’oculaire seront placés plus tard.',
+  s1_t:'Le faisceau incident', s1_d:'L’astre envoie un faisceau de rayons parallèles entre eux, inclinés de α par rapport à l’axe. Ils entrent par l’ouverture du tube et se dirigent vers M₁.',
+  s2_t:'Rayon arrivant au sommet S', s2_d:'Le rayon qui arrive en S est réfléchi symétriquement par rapport à l’axe : il repart incliné de α de l’autre côté. (Rayon de construction : en réalité il serait arrêté par le dos de M₂.)',
+  s3_t:'Convergence dans le plan focal', s3_d:'Après réflexion sur M₁, tous les rayons du faisceau convergent dans le plan focal du miroir (la verticale passant par F₁), au point où le rayon issu de S coupe ce plan.',
+  s4_t:'Image A₁B₁ donnée par M₁', s4_d:'B₁ et son pied A₁ = F₁ forment l’image A₁B₁, réelle et renversée. Mais elle se forme dans le tube, sur le trajet de la lumière incidente : la tête de l’observateur masquerait l’astre !',
+  s5_t:'Le miroir secondaire M₂', s5_d:'Un petit miroir plan incliné à 45° renvoie le faisceau vers le haut, hors du tube. L’image A₂B₂ est le symétrique de A₁B₁ par rapport au plan de M₂ : même taille, et A₂ = F₁′ (image de F₁).',
+  s6_t:'On fait glisser l’oculaire L₂', s6_d:'Faites glisser L₂ verticalement (souris ou curseur « Mise au point »). F₂ au-dessus de F₁′ : rayons convergents ; F₂ au-dessous : divergents ; F₂ confondu avec F₁′ : rayons parallèles.',
+  s7_t:'Construction ① : rayon par O₂', s7_d:'L₂ est réglée (F₂ = F₁′). Le rayon issu de B₂ qui passe par le centre optique O₂ n’est pas dévié : il donne la direction du faisceau émergent.',
+  s8_t:'Construction ② : rayon parallèle à l’axe', s8_d:'Le rayon issu de B₂ parallèle à l’axe de l’oculaire ressort en passant par F₂′. Il est parallèle au rayon ① : B₂ étant dans le plan focal objet de L₂, tout rayon issu de B₂ ressort parallèle à (B₂O₂).',
+  s9_t:'Les rayons réels émergent', s9_d:'Chacun des rayons du faisceau, en atteignant L₂, ressort parallèle aux deux rayons de construction.',
+  s10_t:'Le faisceau sortant', s10_d:'Les rayons sortent parallèles entre eux, inclinés de α′ par rapport à l’axe de l’oculaire. L’œil reçoit ce faisceau sans accommoder : α′ > α, l’astre paraît grossi.',
+  s11_t:'Bilan : le grossissement', s11_d:'α′/α = f₁/f₂ = G. Ici f₁ = {f1} mm et f₂ = {f2} mm, donc G = {G}. L’image est renversée.',
+  f_ready:'Télescope prêt · appuyez sur Lecture', f_f1:'f₁ = {v} mm', f_f2:'f₂ = {v} mm',
+  f_alpha:'α = {v}°', f_focus:'Mise au point = {v}', f_reset:'Réinitialisé',
+  f_fast_on:'Démo rapide activée', f_fast_off:'Démo rapide désactivée', f_lang:'Langue : français',
+  zoom_in:'🔍 Zoom oculaire', zoom_out:'🔭 Vue d’ensemble',
+  f_step:'Étape {n}', f_done:'Construction terminée', f_par:'F₁′ et F₂ confondus : faisceau émergent parallèle'
+ },
+ en:{
+  overline:'Geometrical optics · Newtonian telescope', h1:'NEWTONIAN <span>TELESCOPE</span>',
+  tab1:'Rays', tab2:'Magnification', tab3:'Step by step',
+  sec_opt:'OPTICS', sec_obs:'OBSERVATION', sec_anim:'ANIMATION', sec_disp:'OVERLAY',
+  lbl_f1:'Mirror focal length <i>f₁</i>', lbl_f2:'Eyepiece focal length <i>f₂</i>',
+  lbl_alpha:'Star tilt <i>α</i>', lbl_focus:'Focus (eyepiece)', lbl_speed:'Speed',
+  btn_pause:'❚❚ Pause', btn_play:'▶ Play', btn_reset:'⟲ Reset', btn_demo:'⏩ Demo', btn_end:'⏭ End',
+  def_btn:'Definition',
+  def_txt:'The Newtonian telescope is an afocal mirror system: a concave primary mirror M₁, a small flat secondary mirror M₂ tilted at 45° and an eyepiece L₂. From a star at infinity it gives an image also at infinity.',
+  hint1:'Set <i>f₁</i> and <i>f₂</i>: <b>G = f₁/f₂</b>. Drag <b>L₂</b> vertically (mouse or focus slider): at 0 mm the system is afocal. Hover over any element to see what it represents.',
+  hint2:'The flat mirror M₂ keeps the size of the image: A₂B₂ = A₁B₁. That is what links the two triangles.',
+  hint3:'Move on with <b>Next ▶</b> (or the → key). At step 7, drag <b>L₂</b> to find the position where the rays leave parallel.',
+  tg_ray:'Light rays', tg_foci:'Foci & intermediate images', tg_tube:'Telescope tube', tg_eye:'Eye & eyepiece view', tg_phot:'Photons', tg_tip:'Hover tooltips',
+  note:'<b>G = f₁ ⁄ f₂</b> · inverted image · afocal when F₁′ = F₂',
+  view_k:'VIEW 0{n}',
+  v1_t:'The ray path', v1_d:'The beam from the star is reflected by the concave mirror M₁, then sent out of the tube by the flat mirror M₂. The eyepiece L₂ looks at the image A₂B₂ and sends the beam to the eye under the angle α′.',
+  v2_t:'Proving G', v2_d:'We establish G = f₁/f₂ with two right triangles: one on A₁B₁ (mirror M₁), the other on A₂B₂ (eyepiece), linked by the flat mirror M₂.',
+  v3_t:'The step-by-step construction', v3_d:'We build the image formed by M₁, take it out of the tube with M₂, then place the eyepiece and trace the rays leaving it.',
+  ind_afocal:'AFOCAL · IMAGE AT INFINITY', ind_conv:'F₂ ABOVE F₁′ · CONVERGING RAYS', ind_div:'F₂ BELOW F₁′ · DIVERGING RAYS',
+  ind_step:'STEP-BY-STEP · STEP {n}/{max}', ind_demo:'DEMO · STEP {n}/{max}',
+  ro_f1:'Mirror f₁', ro_f2:'Eyepiece f₂', ro_G:'Magnification G', ro_b:'Angle α′',
+  ro_a:'Angle α', ro_rap:'f₁/f₂', ro_step:'Step', ro_gap:'Gap F₁′F₂',
+  u_mm:' mm', u_deg:'°', u_x:'×',
+  w_eye:'eye', w_naked:'NAKED EYE', w_scope:'TELESCOPE', w_astre:'star (∞)', w_axis:'optical axis',
+  w_real:'real image', w_virt:'virtual image', w_inf:'image at ∞',
+  st_par:'F₂ = F₁′ → parallel rays ✓', st_conv:'F₂ above F₁′ → converging', st_div:'F₂ below F₁′ → diverging',
+  step_prev:'◀ Prev', step_next:'Next ▶', step_auto:'▶ Auto', step_stop:'❚❚ Stop', step_count:'STEP {n}/{max}', step_replay:'↻ Slide L₂',
+  drag:'Drag vertically to move the eyepiece',
+  d0_t:'Triangle SA₁B₁ (mirror M₁)', d1_t:'The flat mirror M₂', d2_t:'Triangle O₂A₂B₂ (eyepiece)', d3_t:'Small-angle approximation', d4_t:'The magnification',
+  d0_f:'tan α = '+FR('A₁B₁','SA₁')+' = '+FR('A₁B₁','f₁'),
+  d1_f:'A₂B₂ is the mirror image of A₁B₁ in the plane of M₂: &nbsp;A₂B₂ = A₁B₁',
+  d2_f:'tan α′ = '+FR('A₂B₂','O₂A₂')+' = '+FR('A₂B₂','f₂'),
+  d3_f:'For small angles: tan α ≈ α and tan α′ ≈ α′.',
+  d4_f:'G = '+FR('α′','α')+' = '+FR(FR('A₂B₂','f₂'),FR('A₁B₁','f₁'))+' = '+FR('f₁','f₂')+'<span class="st-note">since A₂B₂ = A₁B₁ · the image is inverted</span>',
+  s0_t:'The optical bench', s0_d:'We draw the optical axis, the tube and the concave primary mirror M₁ (vertex S, focus F₁). The star is at infinity. The secondary mirror and the eyepiece will be placed later.',
+  s1_t:'The incoming beam', s1_d:'The star sends a beam of mutually parallel rays, tilted by α to the axis. They enter through the tube opening and travel towards M₁.',
+  s2_t:'Ray reaching the vertex S', s2_d:'The ray reaching S is reflected symmetrically about the axis: it leaves tilted by α on the other side. (Construction ray: in reality it would be stopped by the back of M₂.)',
+  s3_t:'Convergence in the focal plane', s3_d:'After reflection on M₁, all the rays of the beam converge in the focal plane of the mirror (the vertical through F₁), where the ray from S crosses that plane.',
+  s4_t:'Image A₁B₁ formed by M₁', s4_d:'B₁ and its foot A₁ = F₁ form the image A₁B₁, real and inverted. But it lies inside the tube, in the path of the incoming light: the observer’s head would hide the star!',
+  s5_t:'The secondary mirror M₂', s5_d:'A small flat mirror tilted at 45° sends the beam upwards, out of the tube. The image A₂B₂ is the mirror image of A₁B₁ in the plane of M₂: same size, and A₂ = F₁′ (image of F₁).',
+  s6_t:'Sliding the eyepiece L₂', s6_d:'Drag L₂ vertically (mouse or “Focus” slider). F₂ above F₁′: converging rays; F₂ below: diverging; F₂ on F₁′: parallel rays.',
+  s7_t:'Construction ①: ray through O₂', s7_d:'L₂ is set (F₂ = F₁′). The ray from B₂ through the optical centre O₂ is not bent: it gives the direction of the outgoing beam.',
+  s8_t:'Construction ②: ray parallel to the axis', s8_d:'The ray from B₂ parallel to the eyepiece axis leaves through F₂′. It is parallel to ray ①: since B₂ lies in the object focal plane of L₂, every ray from B₂ leaves parallel to (B₂O₂).',
+  s9_t:'The real rays emerge', s9_d:'Each ray of the beam, on reaching L₂, leaves parallel to the two construction rays.',
+  s10_t:'The outgoing beam', s10_d:'The rays leave mutually parallel, tilted by α′ to the eyepiece axis. The eye receives this beam without accommodating: α′ > α, the star looks magnified.',
+  s11_t:'Result: the magnification', s11_d:'α′/α = f₁/f₂ = G. Here f₁ = {f1} mm and f₂ = {f2} mm, so G = {G}. The image is inverted.',
+  f_ready:'Telescope ready · press Play', f_f1:'f₁ = {v} mm', f_f2:'f₂ = {v} mm',
+  f_alpha:'α = {v}°', f_focus:'Focus = {v}', f_reset:'Reset',
+  f_fast_on:'Fast demo on', f_fast_off:'Fast demo off', f_lang:'Language: English',
+  zoom_in:'🔍 Zoom eyepiece', zoom_out:'🔭 Full view',
+  f_step:'Step {n}', f_done:'Construction complete', f_par:'F₁′ and F₂ coincide: the outgoing beam is parallel'
+ }
+};
+
+/* ================= hover descriptions ================= */
+var TIP={
+ fr:{
+  axis:['Axe optique du miroir','Axe de symétrie du miroir primaire M₁, passant par son sommet S et son foyer F₁.'],
+  axisV:['Axe optique replié','Après réflexion sur M₂, l’axe optique est renvoyé à 90° : il devient l’axe de l’oculaire.'],
+  tube:['Tube du télescope','Il porte les miroirs et arrête la lumière parasite. La lumière de l’astre entre par l’ouverture, à gauche.'],
+  focuser:['Porte-oculaire','Tube coulissant qui permet de monter ou descendre l’oculaire pour faire la mise au point.'],
+  M1:['Miroir primaire M₁','Miroir concave (parabolique) de distance focale f₁ : il fait converger la lumière de l’astre. Son diamètre fixe la quantité de lumière collectée.'],
+  M2:['Miroir secondaire M₂','Petit miroir plan incliné à 45° : il renvoie le faisceau hors du tube, vers l’oculaire. Il masque le centre du faisceau incident (obstruction centrale).'],
+  S:['Sommet S','Centre du miroir M₁, sur l’axe. Un rayon arrivant en S est réfléchi symétriquement par rapport à l’axe.'],
+  F1:['Foyer F₁ du miroir','Les rayons parallèles à l’axe convergent en F₁, à la distance f₁ de S. Avec M₂ en place, la lumière n’atteint plus F₁ : elle converge en F₁′.'],
+  A1F1:['A₁ = F₁','Pied de l’image A₁B₁ sur l’axe. L’astre étant à l’infini, A₁ est confondu avec le foyer F₁ du miroir.'],
+  A2F1p:['A₂ = F₁′','Pied de l’image A₂B₂ : c’est F₁′, l’image du foyer F₁ par le miroir plan M₂.'],
+  A2F1pF2:['A₂ = F₁′ = F₂','Réglage afocal : l’image A₂B₂ est dans le plan focal objet de l’oculaire. L’image finale est rejetée à l’infini.'],
+  B1:['Point B₁','Image de l’astre par M₁ seul : point de convergence du faisceau dans le plan focal du miroir.'],
+  A1B1:['Image A₁B₁ (par M₁)','Image réelle et renversée donnée par M₁ seul. Une fois M₂ en place, elle n’est plus formée : elle sert d’objet (virtuel) pour M₂.'],
+  B2:['Point B₂','Image de B₁ par le miroir plan M₂ : symétrique de B₁ par rapport au plan de M₂.'],
+  A2B2:['Image intermédiaire A₂B₂','Image réelle donnée par {M₁ + M₂}, de même taille que A₁B₁. Elle sert d’objet pour l’oculaire.'],
+  L2:['Oculaire L₂','Lentille convergente de courte focale f₂, utilisée comme une loupe pour observer l’image A₂B₂.'],
+  O2:['Centre optique O₂','Centre de l’oculaire : un rayon passant par O₂ n’est pas dévié.'],
+  F2:['Foyer objet F₂','Foyer objet de l’oculaire. Un objet placé dans le plan focal passant par F₂ donne une image à l’infini.'],
+  F2p:['Foyer image F₂′','Un rayon arrivant sur L₂ parallèlement à son axe ressort en passant par F₂′.'],
+  star:['Astre (à l’infini)','Objet très lointain : ses rayons arrivent parallèles entre eux, inclinés de α par rapport à l’axe.'],
+  rayIn:['Faisceau incident','Rayons parallèles venant de l’astre, inclinés de α. Ils traversent le tube jusqu’au miroir M₁.'],
+  rayM1:['Rayons réfléchis par M₁','Après le miroir concave, les rayons repartent vers l’entrée du tube en convergeant vers le plan focal de M₁.'],
+  rayM2:['Rayons réfléchis par M₂','Renvoyés vers le haut par le miroir plan, ils convergent en B₂ puis divergent vers l’oculaire.'],
+  rayOut:['Faisceau émergent','Rayons sortant de l’oculaire. Au réglage afocal, ils sont parallèles entre eux et inclinés de α′.'],
+  rayDiv:['Rayons divergents','Après B₁, les rayons s’écartent et repartent vers l’ouverture du tube : l’image est inaccessible à l’œil.'],
+  rayDivUp:['Rayons divergents','Sans oculaire, les rayons se croisent en B₂ puis s’écartent.'],
+  rayBlock:['Rayon arrêté','Ce rayon heurte le dos du miroir secondaire : c’est l’obstruction centrale, qui fait perdre un peu de lumière.'],
+  rayS:['Rayon de construction (par S)','Rayon arrivant au sommet S : il est réfléchi symétriquement par rapport à l’axe et passe par B₁.'],
+  rayO2:['Rayon de construction ①','Rayon issu de B₂ passant par O₂ : non dévié, il donne la direction α′ du faisceau émergent.'],
+  rayPar:['Rayon de construction ②','Rayon issu de B₂ parallèle à l’axe de l’oculaire : il ressort de L₂ en passant par F₂′.'],
+  planF1:['Plan focal de M₁','Plan perpendiculaire à l’axe passant par F₁ : tout faisceau parallèle y converge en un point.'],
+  planM2:['Plan du miroir M₂','Le miroir plan donne de tout objet une image symétrique par rapport à ce plan.'],
+  sym:['Symétrie par rapport à M₂','A₂ et B₂ sont les symétriques de A₁ et B₁ par rapport au plan de M₂ : A₂B₂ = A₁B₁.'],
+  alpha:['Angle α','Diamètre apparent de l’astre à l’œil nu : angle entre le faisceau incident et l’axe optique.'],
+  alphap:['Angle α′','Angle sous lequel l’astre est vu dans le télescope. α′ > α : l’astre paraît plus gros.'],
+  eye:['Œil de l’observateur','Placé au-dessus de l’oculaire, il reçoit un faisceau parallèle : il observe sans accommoder (sans fatigue).'],
+  medNaked:['Vue à l’œil nu','L’astre est vu sous l’angle α, à l’endroit.'],
+  medScope:['Vue dans le télescope','L’astre est vu sous l’angle α′ ≈ G·α : plus gros, et renversé.'],
+  tri1:['Triangle SA₁B₁','Rectangle en A₁ : tan α = A₁B₁ / SA₁ = A₁B₁ / f₁.'],
+  tri2:['Triangle O₂A₂B₂','Rectangle en A₂ : tan α′ = A₂B₂ / O₂A₂ = A₂B₂ / f₂.'],
+  imgReal:['Image réelle','L’oculaire est trop haut (F₂ au-dessus de F₁′) : les rayons émergents convergent et forment une image réelle.'],
+  imgVirt:['Image virtuelle','L’oculaire est trop bas (F₂ au-dessous de F₁′) : les rayons émergents divergent ; leurs prolongements se coupent en une image virtuelle.'],
+  imgInf:['Image à l’infini','Au réglage afocal, les rayons émergents sont parallèles : l’image finale est à l’infini.'],
+  gap:['Écart F₁′F₂','Distance entre F₁′ et le foyer objet de l’oculaire. Elle doit être nulle pour un réglage afocal.']
+ },
+ en:{
+  axis:['Mirror optical axis','Symmetry axis of the primary mirror M₁, through its vertex S and its focus F₁.'],
+  axisV:['Folded optical axis','After reflection on M₂ the optical axis is turned by 90°: it becomes the eyepiece axis.'],
+  tube:['Telescope tube','It holds the mirrors and blocks stray light. Starlight enters through the opening on the left.'],
+  focuser:['Focuser','Sliding tube used to raise or lower the eyepiece to focus.'],
+  M1:['Primary mirror M₁','Concave (parabolic) mirror of focal length f₁: it makes the starlight converge. Its diameter sets how much light is collected.'],
+  M2:['Secondary mirror M₂','Small flat mirror tilted at 45°: it sends the beam out of the tube, towards the eyepiece. It hides the centre of the incoming beam (central obstruction).'],
+  S:['Vertex S','Centre of mirror M₁, on the axis. A ray reaching S is reflected symmetrically about the axis.'],
+  F1:['Mirror focus F₁','Rays parallel to the axis converge at F₁, at the distance f₁ from S. With M₂ in place the light no longer reaches F₁: it converges at F₁′.'],
+  A1F1:['A₁ = F₁','Foot of the image A₁B₁ on the axis. The star being at infinity, A₁ coincides with the mirror focus F₁.'],
+  A2F1p:['A₂ = F₁′','Foot of the image A₂B₂: it is F₁′, the image of the focus F₁ in the flat mirror M₂.'],
+  A2F1pF2:['A₂ = F₁′ = F₂','Afocal setting: the image A₂B₂ lies in the object focal plane of the eyepiece. The final image is at infinity.'],
+  B1:['Point B₁','Image of the star by M₁ alone: where the beam converges in the focal plane of the mirror.'],
+  A1B1:['Image A₁B₁ (by M₁)','Real, inverted image formed by M₁ alone. Once M₂ is in place it is no longer formed: it is a (virtual) object for M₂.'],
+  B2:['Point B₂','Image of B₁ in the flat mirror M₂: mirror image of B₁ in the plane of M₂.'],
+  A2B2:['Intermediate image A₂B₂','Real image formed by {M₁ + M₂}, the same size as A₁B₁. It is the object for the eyepiece.'],
+  L2:['Eyepiece L₂','Short focal length f₂ converging lens, used as a magnifier to look at the image A₂B₂.'],
+  O2:['Optical centre O₂','Centre of the eyepiece: a ray through O₂ is not bent.'],
+  F2:['Object focus F₂','Object focal point of the eyepiece. An object in the focal plane through F₂ gives an image at infinity.'],
+  F2p:['Image focus F₂′','A ray reaching L₂ parallel to its axis leaves through F₂′.'],
+  star:['Star (at infinity)','Very distant object: its rays arrive mutually parallel, tilted by α to the axis.'],
+  rayIn:['Incoming beam','Parallel rays from the star, tilted by α. They travel down the tube to mirror M₁.'],
+  rayM1:['Rays reflected by M₁','After the concave mirror the rays head back towards the tube opening, converging towards the focal plane of M₁.'],
+  rayM2:['Rays reflected by M₂','Sent upwards by the flat mirror, they converge at B₂ and then diverge towards the eyepiece.'],
+  rayOut:['Outgoing beam','Rays leaving the eyepiece. In the afocal setting they are mutually parallel, tilted by α′.'],
+  rayDiv:['Diverging rays','After B₁ the rays spread apart and head back to the tube opening: the image cannot be reached by the eye.'],
+  rayDivUp:['Diverging rays','Without an eyepiece, the rays cross at B₂ and then spread apart.'],
+  rayBlock:['Blocked ray','This ray hits the back of the secondary mirror: that is the central obstruction, which costs a little light.'],
+  rayS:['Construction ray (through S)','Ray reaching the vertex S: it is reflected symmetrically about the axis and passes through B₁.'],
+  rayO2:['Construction ray ①','Ray from B₂ through O₂: not bent, it gives the direction α′ of the outgoing beam.'],
+  rayPar:['Construction ray ②','Ray from B₂ parallel to the eyepiece axis: it leaves L₂ through F₂′.'],
+  planF1:['Focal plane of M₁','Plane perpendicular to the axis through F₁: any parallel beam converges to a point in it.'],
+  planM2:['Plane of mirror M₂','A flat mirror gives of any object an image symmetric about this plane.'],
+  sym:['Symmetry about M₂','A₂ and B₂ are the mirror images of A₁ and B₁ in the plane of M₂: A₂B₂ = A₁B₁.'],
+  alpha:['Angle α','Apparent size of the star to the naked eye: angle between the incoming beam and the optical axis.'],
+  alphap:['Angle α′','Angle under which the star is seen through the telescope. α′ > α: the star looks bigger.'],
+  eye:['Observer’s eye','Above the eyepiece, it receives a parallel beam: it observes without accommodating (no strain).'],
+  medNaked:['Naked-eye view','The star is seen under the angle α, upright.'],
+  medScope:['Telescope view','The star is seen under the angle α′ ≈ G·α: bigger, and inverted.'],
+  tri1:['Triangle SA₁B₁','Right angle at A₁: tan α = A₁B₁ / SA₁ = A₁B₁ / f₁.'],
+  tri2:['Triangle O₂A₂B₂','Right angle at A₂: tan α′ = A₂B₂ / O₂A₂ = A₂B₂ / f₂.'],
+  imgReal:['Real image','The eyepiece is too high (F₂ above F₁′): the outgoing rays converge and form a real image.'],
+  imgVirt:['Virtual image','The eyepiece is too low (F₂ below F₁′): the outgoing rays diverge; their backward extensions meet at a virtual image.'],
+  imgInf:['Image at infinity','In the afocal setting the outgoing rays are parallel: the final image is at infinity.'],
+  gap:['Gap F₁′F₂','Distance between F₁′ and the object focus of the eyepiece. It must be zero for the afocal setting.']
+ }
+};
+
+var state={lang:'fr', view:1, zoom:false, _zkey:'', f1:600, f2:40, alpha:1.5, focus:0, speed:1, fast:false, playing:false,
+  step:0, _stepT:0, l2off:0, slide:{on:false,t:1}, dragging:false,
+  show:{ray:true,foci:true,tube:true,eye:true,phot:true,tip:true},
+  photons:[]};
+(function(){for(var r=0;r<3;r++)for(var k=0;k<3;k++)state.photons.push({ray:r,s:(k/3+r*0.08)%1});})();
+
+function D(){return T[state.lang];}
+function t(k,v){var s=D()[k]; if(s==null)s=k; if(v){for(var x in v){s=s.split('{'+x+'}').join(v[x]);}} return s;}
+function fmt(x,d){if(d==null)d=2; var s=x.toFixed(d); return state.lang==='fr'?s.replace('.',','):s;}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+/* slow periodic highlight (view 2) : 0 → 1 → 0 every 2.6 s */
+function slowPulse(){return 0.5+0.5*Math.sin(performance.now()*TAU/2600);}
+function ease(u){u=clamp(u,0,1);return u*u*(3-2*u);}
+function setTxt(el,s){if(el.__t!==s){el.__t=s;el.textContent=s;}}
+function hexA(hex,a){var n=parseInt(hex.slice(1),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+function rgbs(r,g,b,a){return 'rgba('+r+','+g+','+b+','+a+')';}
+function norm(dx,dy){var m=Math.hypot(dx,dy)||1;return {x:dx/m,y:dy/m};}
+function stepMax(){return state.view===2?4:11;}
+function $(id){return document.getElementById(id);}
+function Gval(){return state.f1/state.f2;}
+
+/* ================= canvas ================= */
+var vp=$('viewport'), hudTop=$('hud-top');
+var cv=$('sim'), ctx=cv.getContext('2d');
+var cssW=0,cssH=0,DPR=1,G=null, BAND={top:150,bottom:400};
+function cumLen(p){var c=[0],tot=0;for(var i=1;i<p.length;i++){tot+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);c.push(tot);}return {c:c,tot:tot};}
+function polyAt(p,cl,s){var tg=s*cl.tot; for(var i=1;i<p.length;i++){if(tg<=cl.c[i]||i===p.length-1){var sg=(cl.c[i]-cl.c[i-1])||1;var f=(tg-cl.c[i-1])/sg;return {x:p[i-1].x+(p[i].x-p[i-1].x)*f, y:p[i-1].y+(p[i].y-p[i-1].y)*f};}}return p[p.length-1];}
+function updateBand(){
+  var hb=hudTop.offsetTop+hudTop.offsetHeight;
+  var top=Math.max(hb,140)+26, bottom=cssH-14;
+  if(bottom-top<230) top=Math.max(40,bottom-230);
+  BAND.top=top; BAND.bottom=bottom;
+}
+
+/* Geometry (px). Main frame: x to the right, y up from the mirror axis.
+   Folded frame after M2: Y = height above the axis, t = transverse offset from the eyepiece axis.
+   off = eyepiece shift (mm) from the afocal position, positive = higher. */
+function geomFor(off){
+  var W=cssW,H=cssH;
+  if(W<60||H<60)return null;
+  var bandH=BAND.bottom-BAND.top;
+  var HL1=clamp(bandH*0.19,36,80), tMax=Math.tan(AMAX*DEG);
+  function scale(hImg,below){
+    var availAbove=bandH-below-12;
+    var ESCv=(availAbove-hImg-18)/(2*state.f2+15);
+    var ESCh=(W-300+hImg)/state.f1;
+    return clamp(Math.min(ESCv,ESCh),0.1,3);
+  }
+  var below=HL1+30, hImg=HL1+26, ESC=scale(hImg,below);
+  var Tt=Math.max(HL1+8, 0.94*HL1+tMax*(state.f1*ESC-hImg+60)+6);
+  below=Tt+14; if(Tt+18>hImg)hImg=Tt+18; ESC=scale(hImg,below);
+  var F1=state.f1*ESC, F2=state.f2*ESC;
+  var cy=BAND.bottom-below;
+  var need=F1-hImg+300, xM=W-58-Math.max(0,W-need)/2;
+  var xS2=xM-F1+hImg, d2=F1-hImg;
+  var Tw=Math.max(HL1+8, 0.94*HL1+tMax*(d2+60)+6);
+  var Ya=hImg+F2, YL2=Ya+off*ESC, Yeye=Ya+Math.max(F2+18,50);
+  var m=-Math.tan(state.alpha*DEG);
+  var imp=state.alpha>=0?[0.94*HL1,0.5*HL1,-0.94*HL1]:[0.94*HL1,-0.5*HL1,-0.94*HL1];   /* inner ray kept clear of the secondary's shadow */
+  var impAll=[0.94*HL1,0.5*HL1,-0.5*HL1,-0.94*HL1];
+  var s2=10, hl2=16, fw=12;
+  [tMax,-tMax].forEach(function(mm){
+    for(var i=0;i<impAll.length;i++){var yh=impAll[i], mu=-mm-yh/F1;
+      var us=(d2+yh)/(1-mu); s2=Math.max(s2,Math.abs(yh+mu*us)+4);
+      hl2=Math.max(hl2,Math.abs(yh+mu*(Ya+d2))+9);
+      fw=Math.max(fw,Math.abs(yh+mu*(Tw+d2))+6,Math.abs(yh+mu*(hImg+d2))+6);}
+  });
+  return {W:W,H:H,cy:cy,HL1:HL1,hImg:hImg,ESC:ESC,F1:F1,F2:F2,xM:xM,xS2:xS2,d2:d2,T:Tw,xT0:xS2-60,
+    Ya:Ya,YL2:YL2,Yeye:Yeye,m:m,imp:imp,s2:s2,hl2:hl2,fw:fw,x0:24,off:off,afocal:Math.abs(off)<0.5};
+}
+function V(g,Y,tt){return {x:g.xS2+tt,y:g.cy-Y};}
+function sagV(g,y){var r=y/g.HL1;return 7*r*r;}
+function incY(g,yh,x){return yh+g.m*(x-g.xM);}
+function pointsFor(g){
+  var tB=-g.m*g.F1;
+  return {S:{x:g.xM,y:g.cy}, F1:{x:g.xM-g.F1,y:g.cy}, B1:{x:g.xM-g.F1,y:g.cy-g.m*g.F1},
+    A2:V(g,g.hImg,0), B2:V(g,g.hImg,tB), O2:V(g,g.YL2,0), F2:V(g,g.YL2-g.F2,0), F2p:V(g,g.YL2+g.F2,0),
+    tB:tB, side:(tB>=0?1:-1)};
+}
+/* stage 1: M1 only ; 2: M1 + M2 ; 3: M1 + M2 + L2.  Yend = height where the rays stop. */
+function buildRays(g,stage,Yend){
+  var out=[];
+  for(var i=0;i<g.imp.length;i++){
+    var yh=g.imp[i], mu=g.m-yh/g.F1;
+    var P0={x:g.x0,y:g.cy-incY(g,yh,g.x0)}, r;
+    if(stage>=2){
+      var xb=(g.xS2-yh+g.m*g.xM)/(1+g.m), yb=g.xS2-xb;
+      if(Math.abs(yb)<=g.s2&&xb>g.x0){ r={pts:[P0,{x:xb,y:g.cy-yb}],blocked:true}; r.cum=cumLen(r.pts); out.push(r); continue; }
+    }
+    var P1={x:g.xM-sagV(g,yh),y:g.cy-yh};
+    if(stage===1){ var u=g.xM-8; r={pts:[P0,P1,{x:8,y:g.cy-(yh+mu*u)}]}; }
+    else {
+      var us=(g.d2+yh)/(1-mu), P2={x:g.xM-us,y:g.cy-(yh+mu*us)};
+      if(stage===2){ r={pts:[P0,P1,P2,V(g,Yend,-(yh+mu*(Yend+g.d2)))]}; }
+      else {
+        var t2=-(yh+mu*(g.YL2+g.d2)), P3=V(g,g.YL2,t2), sB=-mu-t2/g.F2;
+        r={pts:[P0,P1,P2,P3,V(g,Yend,t2+sB*(Yend-g.YL2))],slope:sB};
+      }
+    }
+    r.blocked=false; r.cum=cumLen(r.pts); out.push(r);
+  }
+  return out;
+}
+
+function resize(){var r=vp.getBoundingClientRect();DPR=Math.min(window.devicePixelRatio||1,2);
+  cssW=r.width;cssH=r.height;cv.width=Math.round(r.width*DPR);cv.height=Math.round(r.height*DPR);updateBand();}
+new ResizeObserver(resize).observe(vp);
+new ResizeObserver(updateBand).observe(hudTop);
+resize();
+
+/* ---- starfield background ---- */
+var bg=$('bg'), bx=bg.getContext('2d'); var stars=[],DPRb=1;
+function sizeBg(){DPRb=Math.min(window.devicePixelRatio||1,2);bg.width=innerWidth*DPRb;bg.height=innerHeight*DPRb;
+  bg.style.width=innerWidth+'px';bg.style.height=innerHeight+'px';
+  stars=[];for(var i=0;i<130;i++){stars.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*1.3+0.3,p:Math.random()*TAU,s:0.4+Math.random()*1.3});}}
+addEventListener('resize',sizeBg); sizeBg();
+function drawBg(tt){bx.setTransform(DPRb,0,0,DPRb,0,0);bx.clearRect(0,0,innerWidth,innerHeight);
+  for(var i=0;i<stars.length;i++){var st=stars[i];bx.globalAlpha=0.18+0.5*(0.5+0.5*Math.sin(tt*0.001*st.s+st.p));
+    bx.fillStyle='#cfe2ff';bx.beginPath();bx.arc(st.x,st.y,st.r,0,TAU);bx.fill();}
+  bx.globalAlpha=1;}
+
+/* ================= hover hotspots ================= */
+var HOT=[], HOVER=null, MOUSE={x:-1,y:-1,in:false};
+var HOTSCR=false;
+function hp(x,y,k,r){HOT.push({t:'p',x:x,y:y,k:k,r:r||9,scr:HOTSCR});}
+function hs(a,b,k,r){HOT.push({t:'s',a:{x:a.x,y:a.y},b:{x:b.x,y:b.y},k:k,r:r||6});}
+function hlens(a,b,k){HOT.push({t:'l',a:{x:a.x,y:a.y},b:{x:b.x,y:b.y},k:k,r:11});}
+function htri(P,Q,R,k){HOT.push({t:'t',P:P,Q:Q,R:R,k:k});}
+function distSeg(px,py,a,b){var dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy;var u=L?clamp(((px-a.x)*dx+(py-a.y)*dy)/L,0,1):0;return Math.hypot(px-(a.x+u*dx),py-(a.y+u*dy));}
+function inTri(px,py,P,Q,R){function s(a,b){return (px-b.x)*(a.y-b.y)-(a.x-b.x)*(py-b.y);}var d1=s(P,Q),d2=s(Q,R),d3=s(R,P);
+  var neg=(d1<0)||(d2<0)||(d3<0),pos=(d1>0)||(d2>0)||(d3>0);return !(neg&&pos);}
+function pickHover(){
+  HOVER=null; if(!MOUSE.in)return;
+  var best=1e9,wx=(MOUSE.x-CAM.tx)/CAM.k,wy=(MOUSE.y-CAM.ty)/CAM.k;
+  for(var i=0;i<HOT.length;i++){var h=HOT[i],d,score,mx=h.scr?MOUSE.x:wx,my=h.scr?MOUSE.y:wy,kk=h.scr?1:CAM.k;
+    if(h.t==='p'){d=Math.hypot(mx-h.x,my-h.y)*kk;if(d>Math.max(h.r,h.r*kk*0.6))continue;score=d-4;}
+    else if(h.t==='s'||h.t==='l'){d=distSeg(mx,my,h.a,h.b)*kk;if(d>h.r)continue;score=d+(h.t==='l'?0:2);}
+    else {if(!inTri(mx,my,h.P,h.Q,h.R))continue;score=9;}
+    if(score<=best){best=score;HOVER=h;}
+  }
+  if(!state.show.tip && HOVER && HOVER.k!=='L2') HOVER=null;
+}
+function drawHover(){
+  var h=HOVER; if(!h||!state.show.tip)return;
+  ctx.save(); if(h.scr){ctx.setTransform(DPR,0,0,DPR,0,0);}ctx.strokeStyle='rgba(95,217,255,.95)';ctx.shadowColor='#5fd9ff';ctx.shadowBlur=12;
+  if(h.t==='p'){ctx.lineWidth=(1.6)*LWS;ctx.beginPath();ctx.arc(h.x,h.y,h.r>14?h.r+3:8,0,TAU);ctx.stroke();}
+  else if(h.t==='s'||h.t==='l'){ctx.lineWidth=(h.t==='l'?6:5)*LWS;ctx.globalAlpha=.35;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(h.a.x,h.a.y);ctx.lineTo(h.b.x,h.b.y);ctx.stroke();}
+  else {ctx.lineWidth=(2)*LWS;ctx.fillStyle='rgba(95,217,255,.08)';ctx.beginPath();ctx.moveTo(h.P.x,h.P.y);ctx.lineTo(h.Q.x,h.Q.y);ctx.lineTo(h.R.x,h.R.y);ctx.closePath();ctx.fill();ctx.stroke();}
+  ctx.restore();
+}
+var tipEl=$('tip');
+function updateTip(){
+  if(!HOVER||!MOUSE.in||!state.show.tip||state.dragging){tipEl.classList.remove('on');return;}
+  var d=TIP[state.lang][HOVER.k]; if(!d){tipEl.classList.remove('on');return;}
+  var html='<b>'+d[0]+'</b>'+d[1]+((HOVER.k==='L2'&&canDragL2())?'<em>↕ '+D().drag+'</em>':'');
+  if(tipEl.__h!==html){tipEl.__h=html;tipEl.innerHTML=html;}
+  var w=tipEl.offsetWidth,h=tipEl.offsetHeight;
+  var x=MOUSE.x+16, y=MOUSE.y+18;
+  if(x+w>cssW-8)x=MOUSE.x-16-w; if(y+h>cssH-8)y=MOUSE.y-h-14; if(y<6)y=6; if(x<6)x=6;
+  tipEl.style.left=x+'px'; tipEl.style.top=y+'px'; tipEl.classList.add('on');
+}
+function updateCursor(){
+  var c='default';
+  if(state.dragging)c='grabbing';
+  else if(HOVER&&HOVER.k==='L2'&&canDragL2())c='ns-resize';
+  else if(HOVER)c='help';
+  else if(state.view!==3)c='pointer';
+  if(cv.style.cursor!==c)cv.style.cursor=c;
+}
+
+/* ---- drawing helpers ---- */
+function star4(x,y,r,col){ctx.fillStyle=col;ctx.beginPath();
+  for(var i=0;i<8;i++){var ang=i*Math.PI/4, rr=(i%2)?r*0.4:r;var px=x+Math.cos(ang)*rr,py=y+Math.sin(ang)*rr;if(i){ctx.lineTo(px,py);}else{ctx.moveTo(px,py);}}
+  ctx.closePath();ctx.fill();}
+function dot(x,y,hollow){ctx.save();if(hollow){ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=(1.2)*LWS;ctx.beginPath();ctx.arc(x,y,3*LWS,0,TAU);ctx.stroke();}
+  else{ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();ctx.arc(x,y,2.6*Math.sqrt(LWS),0,TAU);ctx.fill();}ctx.restore();}
+function geo(x,y,s,align,col,font){ctx.save();ctx.fillStyle=col||'rgba(225,232,242,.92)';ctx.font=fz(font||FONTGEO);ctx.textAlign=align||'left';ctx.textBaseline='alphabetic';ctx.fillText(s,x,y);ctx.restore();}
+function arrowHead(x,y,ang,col,size){size*=Math.sqrt(LWS);ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x,y);
+  ctx.lineTo(x-size*Math.cos(ang-0.4),y-size*Math.sin(ang-0.4));
+  ctx.lineTo(x-size*Math.cos(ang+0.4),y-size*Math.sin(ang+0.4));ctx.closePath();ctx.fill();}
+function seg(p,q,col,w,glow,dash){ctx.save();ctx.strokeStyle=col;ctx.lineWidth=(w)*LWS;if(glow){ctx.shadowColor=col;ctx.shadowBlur=glow;}if(dash){ctx.setLineDash(dash);}ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();ctx.restore();}
+function fadeSeg(p,q,col,w,anim){ /* dashed segment fading out, animated */
+  var gr=ctx.createLinearGradient(p.x,p.y,q.x,q.y);gr.addColorStop(0,hexA(col,.85));gr.addColorStop(1,hexA(col,.04));
+  ctx.save();ctx.strokeStyle=gr;ctx.lineWidth=(w)*LWS;ctx.setLineDash([7,5]);if(anim)ctx.lineDashOffset=-performance.now()*0.03;
+  ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();ctx.restore();}
+function tri(P,Q,R,col,isHot,key){
+  ctx.save();ctx.beginPath();ctx.moveTo(P.x,P.y);ctx.lineTo(Q.x,Q.y);ctx.lineTo(R.x,R.y);ctx.closePath();
+  var pp=isHot?slowPulse():0;
+  ctx.fillStyle=hexA(col,isHot?0.05+0.27*pp:0.06);ctx.fill();
+  ctx.strokeStyle=hexA(col,isHot?0.45+0.55*pp:0.45);ctx.lineWidth=(isHot?1.4+2.6*pp:1.3)*LWS;
+  if(isHot){ctx.shadowColor=col;ctx.shadowBlur=3+17*pp;}
+  ctx.stroke();ctx.restore(); if(key)htri(P,Q,R,key);
+}
+function intersect(a,b,c,d){var den=(a.x-b.x)*(c.y-d.y)-(a.y-b.y)*(c.x-d.x);if(Math.abs(den)<1e-6)return null;var tt=((a.x-c.x)*(c.y-d.y)-(a.y-c.y)*(c.x-d.x))/den;return {x:a.x+tt*(b.x-a.x),y:a.y+tt*(b.y-a.y)};}
+function rightAngle(c,u,v,s){ctx.save();ctx.strokeStyle='rgba(200,216,240,.6)';ctx.lineWidth=(1)*LWS;
+  ctx.beginPath();ctx.moveTo(c.x+u.x*s,c.y+u.y*s);ctx.lineTo(c.x+u.x*s+v.x*s,c.y+u.y*s+v.y*s);ctx.lineTo(c.x+v.x*s,c.y+v.y*s);ctx.stroke();ctx.restore();}
+/* arc between directions aA (the ray) and aB (the reference axis), canvas angles */
+function angleArc(vx,vy,aA,aB,col,label,isHot,key,rad){
+  rad=rad||24;
+  ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle=hexA(col,0.5);ctx.lineWidth=(1)*LWS;
+  ctx.beginPath();ctx.moveTo(vx,vy);ctx.lineTo(vx+Math.cos(aB)*(rad+12),vy+Math.sin(aB)*(rad+12));ctx.stroke();ctx.setLineDash([]);
+  var dd=aB-aA; while(dd>Math.PI)dd-=TAU; while(dd<-Math.PI)dd+=TAU;
+  if(isHot&&state.view===2){ var pp=slowPulse();
+    ctx.fillStyle=hexA(col,0.05+0.25*pp);ctx.beginPath();ctx.moveTo(vx,vy);ctx.arc(vx,vy,rad,aA,aA+dd,dd<0);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=hexA(col,0.5+0.5*pp);ctx.lineWidth=(1.6+2.6*pp)*LWS;ctx.shadowColor=col;ctx.shadowBlur=3+15*pp; }
+  else { ctx.strokeStyle=hexA(col,isHot?1:0.85);ctx.lineWidth=(isHot?2.2:1.5)*LWS; }
+  ctx.beginPath();ctx.arc(vx,vy,rad,aA,aA+dd,dd<0);ctx.stroke();ctx.shadowBlur=0;
+  var mid=aA+dd/2, lx=vx+Math.cos(mid)*(rad+14), ly=vy+Math.sin(mid)*(rad+14)+4;
+  ctx.restore();
+  geo(lx,ly,label,'center',hexA(col,0.95));
+  hp(lx,ly-4,key,13);
+}
+function medPos(){return {y:100, xA:cssW-128, xB:cssW-58, r:24};}
+function drawMedallions(hot){
+  ctx.save();ctx.setTransform(DPR,0,0,DPR,0,0);var oL=LWS,oF=FZS;LWS=1;FZS=1;HOTSCR=true;
+  drawMedallions0(hot);
+  LWS=oL;FZS=oF;HOTSCR=false;ctx.restore();
+}
+function drawMedallions0(hot){
+  var m=medPos(), r=m.r, y=m.y, pp=hot?slowPulse():0;
+  var up=state.alpha>=0, t0=9, tS=clamp(t0*Gval(),4,r-4);
+  var arr=[[m.xA,D().w_naked,up?t0:-t0,'rgba(95,217,255,.85)','medNaked'],
+           [m.xB,D().w_scope,up?-tS:tS,'rgba(67,224,184,.95)','medScope']];
+  for(var i=0;i<arr.length;i++){
+    var x=arr[i][0],lab=arr[i][1],h=arr[i][2],col=arr[i][3];
+    ctx.strokeStyle='rgba(126,156,255,.35)';ctx.lineWidth=(1)*LWS;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();
+    ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.clip();
+    ctx.fillStyle='rgba(8,14,28,.6)';ctx.fillRect(x-r,y-r,2*r,2*r);
+    if(Math.abs(h)<1.5){ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,2.4,0,TAU);ctx.fill();}
+    else{ctx.strokeStyle=col;ctx.lineWidth=(2)*LWS;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x,y-h);ctx.stroke();
+      var s=h>0?-1:1;ctx.beginPath();ctx.moveTo(x,y-h);ctx.lineTo(x-3,y-h+s*4);ctx.moveTo(x,y-h);ctx.lineTo(x+3,y-h+s*4);ctx.stroke();}
+    ctx.restore();
+    ctx.fillStyle='rgba(141,160,196,.8)';ctx.font=fz('9px '+MONO);ctx.textAlign='center';ctx.fillText(lab,x,y+r+11);ctx.textAlign='left';
+    if(hot){ctx.save();ctx.strokeStyle=hexA('#ffd98f',0.25+0.65*pp);ctx.lineWidth=1.2+2.6*pp;ctx.shadowColor='#ffd98f';ctx.shadowBlur=4+16*pp;ctx.beginPath();ctx.arc(x,y,r+4,0,TAU);ctx.stroke();ctx.restore();}
+    hp(x,y,arr[i][4],r);
+  }
+  ctx.fillStyle=hot?hexA('#ffd98f',0.6+0.4*pp):'rgba(255,217,143,.85)';ctx.font=fz((hot?'700 12.5px ':'700 11px ')+MONO);ctx.textAlign='center';
+  ctx.fillText('G = '+fmt(Gval(),1)+'×',(m.xA+m.xB)/2,y-r-8);ctx.textAlign='left';
+}
+
+/* ---- optical parts ---- */
+function drawAxis(g,folded){
+  ctx.save();
+  ctx.strokeStyle='rgba(150,190,255,.16)';ctx.lineWidth=(5)*LWS;
+  ctx.beginPath();ctx.moveTo(6,g.cy);ctx.lineTo(g.xM+34,g.cy);ctx.stroke();
+  ctx.strokeStyle='rgba(170,200,255,.72)';ctx.lineWidth=(1.4)*LWS;ctx.setLineDash([14,5,3,5]);
+  ctx.beginPath();ctx.moveTo(6,g.cy);ctx.lineTo(g.xM+34,g.cy);ctx.stroke();
+  if(folded){
+    var top=g.cy-g.Yeye-26;
+    ctx.strokeStyle='rgba(170,200,255,.5)';
+    ctx.beginPath();ctx.moveTo(g.xS2,g.cy);ctx.lineTo(g.xS2,top);ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(170,200,255,.8)';ctx.font=fz('700 10px '+MONO);ctx.textAlign='left';
+  ctx.fillText(D().w_axis.toUpperCase(),12,g.cy+(state.alpha>=0?16:-8));
+  ctx.restore();
+  hs({x:6,y:g.cy},{x:g.xM+34,y:g.cy},'axis',5);
+  if(folded)hs({x:g.xS2,y:g.cy-g.s2-2},{x:g.xS2,y:g.cy-g.Yeye-26},'axisV',4);
+}
+function drawTube(g){
+  var T=g.T, y1=g.cy-T, y2=g.cy+T, xe=g.xM+14, xa=g.xS2-g.fw, xb=g.xS2+g.fw;
+  ctx.save();
+  ctx.fillStyle='rgba(40,70,120,.10)';ctx.fillRect(g.xT0,y1,xe-g.xT0,2*T);
+  ctx.strokeStyle='rgba(150,180,230,.42)';ctx.lineWidth=(2.2)*LWS;
+  ctx.beginPath();ctx.moveTo(g.xT0,y1);ctx.lineTo(xa,y1);ctx.moveTo(xb,y1);ctx.lineTo(xe,y1);ctx.lineTo(xe,y2);ctx.lineTo(g.xT0,y2);ctx.stroke();
+  /* focuser */
+  var yf=g.cy-(g.hImg-4);
+  ctx.strokeStyle='rgba(150,180,230,.32)';ctx.lineWidth=(1.6)*LWS;
+  ctx.beginPath();ctx.moveTo(xa,y1);ctx.lineTo(xa,yf);ctx.moveTo(xb,y1);ctx.lineTo(xb,yf);ctx.stroke();
+  ctx.restore();
+  hs({x:g.xT0,y:y1},{x:xa,y:y1},'tube',5); hs({x:xb,y:y1},{x:xe,y:y1},'tube',5);
+  hs({x:g.xT0,y:y2},{x:xe,y:y2},'tube',5); hs({x:xe,y:y1},{x:xe,y:y2},'tube',5);
+  hs({x:xa,y:y1},{x:xa,y:yf},'focuser',5); hs({x:xb,y:y1},{x:xb,y:yf},'focuser',5);
+}
+function drawM1(g,isHot){
+  var n=24, h=g.HL1+4;
+  ctx.save();
+  ctx.strokeStyle='rgba(150,190,230,.35)';ctx.lineWidth=(1)*LWS;
+  for(var k=0;k<=12;k++){var y=-h+2*h*k/12, x=g.xM-sagV(g,y);ctx.beginPath();ctx.moveTo(x+2,g.cy-y);ctx.lineTo(x+8,g.cy-y-6);ctx.stroke();}
+  ctx.strokeStyle=isHot?'#e6f6ff':'#bfe6ff';ctx.lineWidth=(3)*LWS;ctx.shadowColor='#9fd8ff';ctx.shadowBlur=isHot?12:6;
+  ctx.beginPath();
+  for(var i=0;i<=n;i++){var yy=-h+2*h*i/n, xx=g.xM-sagV(g,yy); if(i)ctx.lineTo(xx,g.cy-yy); else ctx.moveTo(xx,g.cy-yy);}
+  ctx.stroke();ctx.restore();
+  geo(g.xM-sagV(g,h),g.cy-h-12,'M₁','center','rgba(191,230,255,.95)',FONTGEOB);
+  var top={x:g.xM-sagV(g,h),y:g.cy-h}, bot={x:g.xM-sagV(g,h),y:g.cy+h}, S={x:g.xM,y:g.cy};
+  hlens(top,S,'M1'); hlens(S,bot,'M1');
+}
+function drawM2(g,alpha){
+  var a={x:g.xS2-g.s2,y:g.cy-g.s2}, b={x:g.xS2+g.s2,y:g.cy+g.s2};
+  ctx.save();ctx.globalAlpha=alpha==null?1:alpha;
+  ctx.strokeStyle='rgba(150,190,230,.4)';ctx.lineWidth=(1)*LWS;
+  for(var k=0;k<=8;k++){var p={x:a.x+(b.x-a.x)*k/8,y:a.y+(b.y-a.y)*k/8};ctx.beginPath();ctx.moveTo(p.x-2,p.y+2);ctx.lineTo(p.x-8,p.y+2);ctx.stroke();}
+  ctx.strokeStyle='#d5efff';ctx.lineWidth=(3.2)*LWS;ctx.shadowColor='#9fd8ff';ctx.shadowBlur=7;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
+  ctx.save();ctx.globalAlpha=alpha==null?1:alpha;
+  geo(b.x+6,b.y+14,'M₂','left','rgba(213,239,255,.95)',FONTGEOB);ctx.restore();
+  hlens(a,b,'M2');
+}
+function lensH(g,Y,alpha){
+  var x=g.xS2, y=g.cy-Y, w=g.hl2, col='#43e0b8';
+  ctx.save();ctx.globalAlpha=alpha==null?1:alpha;
+  var gr=ctx.createLinearGradient(0,y-6,0,y+6);gr.addColorStop(0,hexA(col,0.05));gr.addColorStop(0.5,hexA(col,0.3));gr.addColorStop(1,hexA(col,0.05));
+  ctx.fillStyle=gr;ctx.beginPath();ctx.ellipse(x,y,w,5,0,0,TAU);ctx.fill();
+  ctx.strokeStyle=hexA(col,0.9);ctx.lineWidth=(1.6)*LWS;ctx.beginPath();ctx.moveTo(x-w,y);ctx.lineTo(x+w,y);ctx.stroke();
+  ctx.fillStyle=hexA(col,0.9);
+  ctx.beginPath();ctx.moveTo(x-w-6,y);ctx.lineTo(x-w,y-4);ctx.lineTo(x-w,y+4);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(x+w+6,y);ctx.lineTo(x+w,y-4);ctx.lineTo(x+w,y+4);ctx.closePath();ctx.fill();
+  ctx.restore();
+  hlens({x:x-w-6,y:y},{x:x+w+6,y:y},'L2');
+}
+function drawEye(g){
+  var x=g.xS2, y=g.cy-g.Yeye-10;
+  ctx.strokeStyle='rgba(233,237,251,.85)';ctx.lineWidth=(1.6)*LWS;
+  ctx.beginPath();ctx.ellipse(x,y,12,7,0,0,TAU);ctx.stroke();
+  ctx.fillStyle='#5fd9ff';ctx.beginPath();ctx.arc(x,y+2,3,0,TAU);ctx.fill();
+  geo(x+18,y+4,D().w_eye,'left','rgba(141,160,196,.85)','10px '+MONO);
+  hp(x,y,'eye',14);
+}
+function drawStar(g){
+  var x=g.x0+10, y=g.cy-incY(g,0,x);
+  star4(x,y,7,'#ffd98f');
+  geo(x+2,y-12,D().w_astre,'left','rgba(255,217,143,.8)','11px '+MONO);
+  hp(x,y,'star',12);
+}
+var RCOL=['#ffd98f','#ffb84d','#ff9a5c','#43e0b8'], RKEY=['rayIn','rayM1','rayM2','rayOut'];
+function drawRays(R,from,to){
+  from=from||0;
+  for(var i=0;i<R.length;i++){var r=R[i];
+    if(r.blocked){
+      if(from>0)continue;
+      seg(r.pts[0],r.pts[1],'rgba(255,217,143,.75)',1.5,3,null); hs(r.pts[0],r.pts[1],'rayBlock');
+      var e=r.pts[1]; ctx.save();ctx.strokeStyle='rgba(255,122,89,.9)';ctx.lineWidth=(2)*LWS;
+      ctx.beginPath();ctx.moveTo(e.x-4,e.y-4);ctx.lineTo(e.x+4,e.y+4);ctx.moveTo(e.x+4,e.y-4);ctx.lineTo(e.x-4,e.y+4);ctx.stroke();ctx.restore();
+      continue;
+    }
+    var last=Math.min(to==null?r.pts.length-1:to,r.pts.length-1);
+    for(var k=from;k<last;k++){seg(r.pts[k],r.pts[k+1],RCOL[k],1.7,5,null);hs(r.pts[k],r.pts[k+1],RKEY[k]);}
+  }
+}
+function drawPhotons(R){
+  for(var pi=0;pi<state.photons.length;pi++){var ph=state.photons[pi];var r=R[ph.ray];if(!r)continue;var q=polyAt(r.pts,r.cum,ph.s);
+    ctx.fillStyle='#fff6dd';ctx.shadowColor='rgba(255,230,150,.9)';ctx.shadowBlur=7;
+    ctx.beginPath();ctx.arc(q.x,q.y,2.3,0,TAU);ctx.fill();ctx.shadowBlur=0;}
+}
+/* labels of the folded part (A2, B2, F1', F2, F2', O2, L2) */
+function drawUpperLabels(g,P,opts){
+  var sd=-P.side, al=sd>0?'left':'right';   /* labels on the side opposite to B2 */
+  var coinc=Math.abs((g.YL2-g.F2)-g.hImg)<0.6;
+  if(opts.A2){
+    dot(P.A2.x,P.A2.y);
+    geo(P.A2.x+sd*7,P.A2.y+5,coinc&&opts.L2?'A₂ = F₁′ = F₂':'A₂ = F₁′',al,'rgba(255,190,160,.95)');
+    hp(P.A2.x,P.A2.y,coinc&&opts.L2?'A2F1pF2':'A2F1p',10);
+  }
+  if(opts.B2){ geo(P.B2.x+P.side*7,P.B2.y+5,'B₂',P.side>0?'left':'right','rgba(255,163,138,.95)'); hp(P.B2.x,P.B2.y,'B2',10); }
+  if(opts.L2){
+    ctx.save();ctx.globalAlpha=opts.la==null?1:opts.la;
+    geo(P.O2.x+P.side*(g.hl2+12),P.O2.y+6,'L₂',P.side>0?'left':'right','rgba(67,224,184,.95)',FONTGEOB);
+    dot(P.O2.x,P.O2.y); geo(P.O2.x+sd*7,P.O2.y-6,'O₂',al,'rgba(200,216,240,.95)'); hp(P.O2.x,P.O2.y,'O2',8);
+    if(!coinc){dot(P.F2.x,P.F2.y); geo(P.F2.x+sd*7,P.F2.y+5,'F₂',al,'rgba(120,255,225,.95)'); hp(P.F2.x,P.F2.y,'F2',10);}
+    dot(P.F2p.x,P.F2p.y); geo(P.F2p.x+P.side*7,P.F2p.y-4,'F₂′',P.side>0?'left':'right','rgba(200,216,240,.9)'); hp(P.F2p.x,P.F2p.y,'F2p',10);
+    ctx.restore();
+  }
+}
+function drawA2B2(g,P){
+  ctx.strokeStyle='rgba(255,122,89,.9)';ctx.lineWidth=(1.6)*LWS;ctx.beginPath();ctx.moveTo(P.A2.x,P.A2.y);ctx.lineTo(P.B2.x,P.B2.y);ctx.stroke();
+  if(Math.abs(P.tB)>3)arrowHead(P.B2.x,P.B2.y,P.side>0?0:Math.PI,'rgba(255,122,89,.9)',6);
+  hs(P.A2,P.B2,'A2B2',6);
+}
+function drawA1B1(g,P,virtual){
+  var col=virtual?'rgba(255,122,89,.45)':'rgba(255,122,89,.9)';
+  ctx.save();ctx.strokeStyle=col;ctx.lineWidth=(1.6)*LWS;if(virtual)ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(P.F1.x,P.F1.y);ctx.lineTo(P.B1.x,P.B1.y);ctx.stroke();ctx.restore();
+  if(Math.abs(P.B1.y-P.F1.y)>3)arrowHead(P.B1.x,P.B1.y,P.B1.y>g.cy?Math.PI/2:-Math.PI/2,col,6);
+  hs(P.F1,P.B1,'A1B1',6);
+  var lc=virtual?'rgba(255,163,138,.55)':'rgba(255,163,138,.95)';
+  geo(P.F1.x-5,g.cy+(P.B1.y>g.cy?-7:16),'A₁ = F₁','right',lc);
+  geo(P.B1.x-5,P.B1.y+(P.B1.y>g.cy?12:-4),'B₁','right',lc);
+  dot(P.F1.x,P.F1.y,virtual); hp(P.F1.x,P.F1.y,'A1F1',10); hp(P.B1.x,P.B1.y,'B1',10);
+}
+function drawSlabel(g){ dot(g.xM,g.cy); geo(g.xM-9,g.cy+17,'S','center','rgba(200,216,240,.95)'); hp(g.xM,g.cy,'S',9); }
+/* image formed by the eyepiece (folded frame) */
+function drawFinalImage(g,R,P){
+  var U=R.filter(function(r){return !r.blocked&&r.pts.length===5;}); if(U.length<2)return;
+  var a=U[0].pts, b=U[U.length-1].pts;
+  if(g.afocal){
+    var lx=g.xS2+P.side*(g.hl2+14), ly=g.cy-(g.YL2+(g.Yeye-g.YL2)*0.55);
+    geo(lx,ly,D().w_inf+' ↑',P.side>0?'left':'right','rgba(120,255,225,.9)','700 10.5px '+MONO);
+    hp(lx+P.side*30,ly-4,'imgInf',22);
+    return;
+  }
+  var I=intersect(a[3],a[4],b[3],b[4]); if(!I)return;
+  var col='rgba(150,180,230,.9)';
+  if(g.off<0){
+    ctx.save();ctx.strokeStyle='rgba(150,180,230,.55)';ctx.lineWidth=(1)*LWS;ctx.setLineDash([4,4]);
+    for(var i=0;i<U.length;i++){var p=U[i].pts,dn=norm(p[3].x-p[4].x,p[3].y-p[4].y),L=Math.hypot(I.x-p[3].x,I.y-p[3].y);
+      if(!(I.y>p[3].y&&I.y<g.H-4&&I.x>4&&I.x<g.W-4))L=110;
+      ctx.beginPath();ctx.moveTo(p[3].x,p[3].y);ctx.lineTo(p[3].x+dn.x*L,p[3].y+dn.y*L);ctx.stroke();}
+    ctx.restore();
+  }
+  var ok=I.x>4&&I.x<g.W-4&&I.y>4&&I.y<g.H-4&&(g.off>0?I.y<a[3].y:I.y>a[3].y);
+  if(ok){
+    ctx.save();ctx.strokeStyle=col;ctx.lineWidth=(2)*LWS;
+    ctx.beginPath();ctx.moveTo(I.x-5,I.y-5);ctx.lineTo(I.x+5,I.y+5);ctx.moveTo(I.x+5,I.y-5);ctx.lineTo(I.x-5,I.y+5);ctx.stroke();ctx.restore();
+    geo(I.x+P.side*10,I.y+4,g.off>0?D().w_real:D().w_virt,P.side>0?'left':'right',col,'700 10.5px '+MONO);
+    hp(I.x,I.y,g.off>0?'imgReal':'imgVirt',12);
+  }
+}
+function drawGap(g,P){
+  var ya=g.cy-g.hImg, yb=g.cy-(g.YL2-g.F2);
+  if(Math.abs(yb-ya)<4)return;
+  var x=g.xS2-P.side*(g.fw+16);
+  ctx.save();ctx.strokeStyle='rgba(255,184,77,.9)';ctx.lineWidth=(1.3)*LWS;
+  ctx.beginPath();ctx.moveTo(x,ya);ctx.lineTo(x,yb);ctx.moveTo(x-5,ya);ctx.lineTo(x+5,ya);ctx.moveTo(x-5,yb);ctx.lineTo(x+5,yb);ctx.stroke();ctx.restore();
+  var mm=Math.round(g.off);
+  geo(x-P.side*8,(ya+yb)/2+4,(mm>0?'+':'')+mm+' mm',P.side>0?'right':'left','rgba(255,217,143,.95)','700 10.5px '+MONO);
+  hs({x:x,y:ya},{x:x,y:yb},'gap',8);
+}
+function alphaAtS(g,isHot){
+  var dx=g.x0-g.xM, dy=-(g.m*dx);
+  angleArc(g.xM,g.cy,Math.atan2(dy,dx),Math.PI,'#ffd98f','α',isHot,'alpha',30);
+}
+function exitAngle(g,P,isHot){
+  var sB=-P.tB/g.F2;
+  angleArc(P.O2.x,P.O2.y,Math.atan2(-1,sB),-Math.PI/2,'#43e0b8','α′',isHot,'alphap',26);
+}
+
+/* ================= view 1 : ray path ================= */
+function drawView1(){
+  var g=geomFor(state.focus); if(!g)return; G=g;
+  var P=pointsFor(g);
+  var Yend=g.afocal?g.Yeye-4:g.cy-(BAND.top-30);
+  var R=buildRays(g,3,Yend); state._rays=R;
+  if(state.show.tube)drawTube(g);
+  drawAxis(g,true);
+  drawStar(g);
+  if(state.show.foci) drawA1B1(g,P,true);
+  if(state.show.ray){ drawRays(R); if(state.show.phot)drawPhotons(R); }
+  if(state.show.foci){
+    /* construction ray B2 -> O2 */
+    var dir=norm(P.O2.x-P.B2.x,P.O2.y-P.B2.y), L=(P.B2.y-(g.cy-g.Yeye+4))/Math.max(-dir.y,0.2);
+    var pb={x:P.B2.x+dir.x*L,y:P.B2.y+dir.y*L};
+    seg(P.B2,pb,'rgba(67,224,184,.45)',1,0,[4,4]); hs(P.B2,pb,'rayO2',4);
+    drawFinalImage(g,R,P);
+    drawGap(g,P);
+  }
+  drawM1(g,false); drawM2(g,1); lensH(g,g.YL2,1);
+  drawSlabel(g);
+  drawA2B2(g,P);
+  drawUpperLabels(g,P,{A2:true,B2:true,L2:true});
+  alphaAtS(g,false);
+  exitAngle(g,P,false);
+  if(state.show.eye){drawEye(g);drawMedallions();}
+}
+
+/* ================= view 2 : proof of G ================= */
+function drawView2(){
+  var g=geomFor(0); if(!g)return; G=g;
+  var step=state.step, P=pointsFor(g);
+  var R=buildRays(g,3,g.Yeye-4); state._rays=R;
+  if(state.show.tube)drawTube(g);
+  drawAxis(g,true);
+  drawStar(g);
+  if(state.show.ray){ drawRays(R); if(state.show.phot)drawPhotons(R); }
+  /* construction ray through S (ignores M2) */
+  var x0={x:g.x0,y:g.cy-incY(g,0,g.x0)};
+  seg(x0,{x:g.xM,y:g.cy},'rgba(95,217,255,.55)',1.3,0,[6,4]); seg({x:g.xM,y:g.cy},P.B1,'rgba(95,217,255,.55)',1.3,0,[6,4]);
+  hs(x0,{x:g.xM,y:g.cy},'rayS',4); hs({x:g.xM,y:g.cy},P.B1,'rayS',4);
+  drawM1(g,false); drawM2(g,1); lensH(g,g.YL2,1);
+  drawSlabel(g);
+  drawA1B1(g,P,true);
+  if(step>=0) tri({x:g.xM,y:g.cy},P.F1,P.B1,'#5fd9ff',step===0,'tri1');
+  if(step>=1){
+    var hot1=step===1, L=g.hImg*0.9+30, p1=hot1?slowPulse():0;
+    seg({x:g.xS2-L,y:g.cy-L},{x:g.xS2+g.s2+20,y:g.cy+g.s2+20},hot1?rgbs(213,239,255,0.3+0.6*p1):'rgba(213,239,255,.3)',hot1?1+1.6*p1:1,hot1?10*p1:0,[5,4]);
+    hs({x:g.xS2-L,y:g.cy-L},{x:g.xS2+g.s2+20,y:g.cy+g.s2+20},'planM2',4);
+    var cs=hot1?rgbs(255,217,143,0.35+0.6*p1):'rgba(255,217,143,.35)';
+    seg(P.F1,P.A2,cs,hot1?1.2+1.6*p1:1.2,hot1?8*p1:0,[2,3]); seg(P.B1,P.B2,cs,hot1?1.2+1.6*p1:1.2,hot1?8*p1:0,[2,3]);
+    if(hot1){ seg(P.F1,P.B1,rgbs(255,122,89,0.25+0.7*p1),2+3*p1,6+14*p1,null); seg(P.A2,P.B2,rgbs(255,122,89,0.25+0.7*p1),2+3*p1,6+14*p1,null); }
+    hs(P.F1,P.A2,'sym',4); hs(P.B1,P.B2,'sym',4);
+  }
+  drawA2B2(g,P);
+  drawUpperLabels(g,P,{A2:true,B2:true,L2:true});
+  if(step>=2){ tri(P.O2,P.A2,P.B2,'#43e0b8',step===2,'tri2'); rightAngle(P.A2,{x:P.side,y:0},{x:0,y:-1},7);
+    angleArc(P.O2.x,P.O2.y,Math.atan2(P.B2.y-P.O2.y,P.B2.x-P.O2.x),Math.PI/2,'#43e0b8','α′',step===2||step===3,'alphap',22); }
+  angleArc(g.xM,g.cy,Math.atan2(P.B1.y-g.cy,P.B1.x-g.xM),Math.PI,'#ffd98f','α',step===0||step===3,'alpha',Math.max(34,g.F1*0.5));
+  drawEye(g);
+  if(step>=4)drawMedallions(step===4);
+}
+
+/* ================= view 3 : step-by-step construction ================= */
+function drawStepView(){
+  var step=state.step, off=(step===STEP_L2)?state.l2off:0;
+  var g=geomFor(off); if(!g)return; G=g;
+  var P=pointsFor(g), hasM2=step>=STEP_M2, hasL2=step>=STEP_L2;
+  var pulse=0.5+0.5*Math.sin(performance.now()*0.006);
+  function hot(k){return step===k;}
+  var R1=buildRays(g,1), R2=buildRays(g,2,g.cy-8);
+  var Yend=(step===STEP_L2&&!g.afocal)?g.cy-(BAND.top-30):g.Yeye-4;
+  var R3=buildRays(g,3,Yend);
+  var R=hasL2?R3:(hasM2?R2:R1);
+  var Sp={x:g.xM,y:g.cy};
+
+  if(state.show.tube)drawTube(g);
+  drawAxis(g,hasM2);
+  drawM1(g,hot(0));
+  if(hot(0)){ctx.save();ctx.strokeStyle=rgbs(191,230,255,0.35+0.4*pulse);ctx.lineWidth=(1.4)*LWS;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.ellipse(g.xM-4,g.cy,12,g.HL1+10,0,0,TAU);ctx.stroke();ctx.restore();}
+  drawSlabel(g);
+  if(step<4){ dot(P.F1.x,P.F1.y); geo(P.F1.x,g.cy+16,'F₁','center','rgba(200,216,240,.9)'); hp(P.F1.x,P.F1.y,'F1',10); }
+  drawStar(g);
+
+  /* 1 : incoming beam */
+  if(step>=1){
+    var c1=hot(1)?rgbs(255,217,143,0.7+0.3*pulse):'rgba(255,217,143,.85)';
+    for(var i=0;i<R.length;i++){var r=R[i];
+      seg(r.pts[0],r.pts[1],c1,hot(1)?2.5:1.6,hot(1)?8:4,null); hs(r.pts[0],r.pts[1],r.blocked?'rayBlock':'rayIn');
+      if(r.blocked){var e=r.pts[1];ctx.save();ctx.strokeStyle='rgba(255,122,89,.9)';ctx.lineWidth=(2)*LWS;ctx.beginPath();ctx.moveTo(e.x-4,e.y-4);ctx.lineTo(e.x+4,e.y+4);ctx.moveTo(e.x+4,e.y-4);ctx.lineTo(e.x-4,e.y+4);ctx.stroke();ctx.restore();}
+    }
+    if(step<=2) alphaAtS(g,hot(1));
+  }
+  /* 2 : construction ray through S */
+  if(step>=2){
+    var a2=hot(2)?0.75+0.25*pulse:(hasM2?0.3:0.6), c2=rgbs(95,217,255,a2);
+    var xs={x:g.x0,y:g.cy-incY(g,0,g.x0)};
+    seg(xs,Sp,c2,hot(2)?2.4:1.3,hot(2)?8:0,[6,4]); seg(Sp,P.B1,c2,hot(2)?2.4:1.3,hot(2)?8:0,[6,4]);
+    hs(xs,Sp,'rayS',4); hs(Sp,P.B1,'rayS',4);
+    if(hot(2)||hot(3)) angleArc(g.xM,g.cy,Math.atan2(P.B1.y-g.cy,P.B1.x-g.xM),Math.PI,'#5fd9ff','α',hot(2),'alpha',34);
+  }
+  /* 3 : reflected rays converge in the focal plane of M1 */
+  if(step>=3&&!hasM2){
+    ctx.save();ctx.strokeStyle=hot(3)?rgbs(255,184,77,0.5+0.4*pulse):'rgba(255,184,77,.4)';ctx.lineWidth=(1)*LWS;ctx.setLineDash([3,4]);
+    ctx.beginPath();ctx.moveTo(P.F1.x,g.cy-g.HL1);ctx.lineTo(P.F1.x,g.cy+g.HL1);ctx.stroke();ctx.restore();
+    hs({x:P.F1.x,y:g.cy-g.HL1},{x:P.F1.x,y:g.cy+g.HL1},'planF1',3);
+    var c3=hot(3)?rgbs(255,184,77,0.7+0.3*pulse):'rgba(255,184,77,.85)';
+    for(var j=0;j<R1.length;j++){seg(R1[j].pts[1],P.B1,c3,hot(3)?2.3:1.6,hot(3)?7:3,null);hs(R1[j].pts[1],P.B1,'rayM1');}
+  }
+  /* 4 : image A1B1 (inside the tube) ; rays diverge after B1 */
+  if(step>=4){
+    if(!hasM2){
+      ctx.fillStyle='#ff7a59';ctx.shadowColor='#ff7a59';ctx.shadowBlur=hot(4)?12:7;
+      ctx.beginPath();ctx.arc(P.B1.x,P.B1.y,hot(4)?5:3.6,0,TAU);ctx.fill();ctx.shadowBlur=0;
+      drawA1B1(g,P,false);
+    } else drawA1B1(g,P,true);
+  }
+  if(step===4){ for(var q=0;q<R1.length;q++){fadeSeg(P.B1,R1[q].pts[2],'#ffb84d',1.8,true);hs(P.B1,R1[q].pts[2],'rayDiv');} }
+  /* 5 : secondary mirror */
+  if(hasM2){
+    var la=hot(5)?clamp(state._stepT*2,0,1):1;
+    for(var k=0;k<R.length;k++){var rr=R[k]; if(rr.blocked)continue;
+      seg(rr.pts[1],rr.pts[2],'rgba(255,184,77,.85)',1.6,3,null); hs(rr.pts[1],rr.pts[2],'rayM1');
+      if(!hasL2){ seg(rr.pts[2],P.B2,'rgba(255,154,92,.9)',1.7,4,null); hs(rr.pts[2],P.B2,'rayM2');
+        fadeSeg(P.B2,rr.pts[3],'#ff9a5c',1.6,true); hs(P.B2,rr.pts[3],'rayDivUp'); }
+      else { seg(rr.pts[2],rr.pts[3],'rgba(255,154,92,.9)',1.7,4,null); hs(rr.pts[2],rr.pts[3],'rayM2'); }
+    }
+    drawM2(g,la);
+    if(hot(5)){
+      var L=g.hImg*0.9+30, ca=rgbs(213,239,255,0.3+0.4*pulse);
+      seg({x:g.xS2-L,y:g.cy-L},{x:g.xS2+g.s2+20,y:g.cy+g.s2+20},ca,1,0,[5,4]);
+      hs({x:g.xS2-L,y:g.cy-L},{x:g.xS2+g.s2+20,y:g.cy+g.s2+20},'planM2',4);
+      var cs=rgbs(255,217,143,0.5+0.4*pulse);
+      seg(P.F1,P.A2,cs,1.3,0,[2,3]); seg(P.B1,P.B2,cs,1.3,0,[2,3]);
+      hs(P.F1,P.A2,'sym',4); hs(P.B1,P.B2,'sym',4);
+    }
+    ctx.fillStyle='#ff7a59';ctx.shadowColor='#ff7a59';ctx.shadowBlur=hot(5)?12:6;
+    ctx.beginPath();ctx.arc(P.B2.x,P.B2.y,hot(5)?4.6:3.2,0,TAU);ctx.fill();ctx.shadowBlur=0;
+    drawA2B2(g,P);
+  }
+  /* 6+ : eyepiece */
+  if(hasL2){
+    var ll=(hot(STEP_L2)&&state.slide.on)?clamp(state.slide.t*10,0,1):1;
+    lensH(g,g.YL2,ll);
+    if(hot(STEP_L2)&&!state.slide.on&&!state.dragging){
+      ctx.save();ctx.strokeStyle=rgbs(67,224,184,0.25+0.35*pulse);ctx.lineWidth=(1.2)*LWS;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.ellipse(g.xS2,g.cy-g.YL2,g.hl2+10,10,0,0,TAU);ctx.stroke();ctx.restore();
+      geo(g.xS2-P.side*(g.hl2+30),g.cy-g.YL2+6,'↕','center',rgbs(67,224,184,0.5+0.4*pulse),'700 17px '+MONO);
+    }
+  }
+  drawUpperLabels(g,P,{A2:hasM2,B2:hasM2,L2:hasL2,la:hasL2?((hot(STEP_L2)&&state.slide.on)?clamp(state.slide.t*10,0,1):1):1});
+  if(step===STEP_L2){
+    for(var n=0;n<R3.length;n++){var r3=R3[n]; if(r3.blocked)continue; seg(r3.pts[3],r3.pts[4],'rgba(67,224,184,.9)',1.8,5,null); hs(r3.pts[3],r3.pts[4],'rayOut');}
+    drawFinalImage(g,R3,P);
+    drawGap(g,P);
+    var st=g.afocal?['st_par','rgba(120,255,225,.95)']:(off>0?['st_conv','rgba(255,140,110,.95)']:['st_div','rgba(255,200,110,.95)']);
+    ctx.save();ctx.setTransform(DPR,0,0,DPR,0,0);var oF=FZS;FZS=1; geo(34,cssH-22,D()[st[0]],'left',st[1],'700 12.5px '+MONO); FZS=oF; ctx.restore();
+  }
+  /* 7 : construction ray ① through O2 */
+  var yTop=g.cy-g.Yeye-20;
+  var dO=norm(P.O2.x-P.B2.x,P.O2.y-P.B2.y), LO=(P.B2.y-yTop)/Math.max(-dO.y,0.15), endO={x:P.B2.x+dO.x*LO,y:P.B2.y+dO.y*LO};
+  if(step>=7){
+    var a7=hot(7)?0.75+0.25*pulse:0.5;
+    seg(P.B2,endO,rgbs(190,150,255,a7),hot(7)?2.4:1.4,hot(7)?8:0,[6,4]); hs(P.B2,endO,'rayO2');
+    geo(P.O2.x+dO.x*g.F2*1.45-P.side*10,P.O2.y+dO.y*g.F2*1.45+4,'①',P.side>0?'right':'left',rgbs(190,150,255,0.95),'700 13px '+MONO);
+    if(hot(7)) exitAngle(g,P,true);
+  }
+  /* 8 : construction ray ② parallel to the eyepiece axis, then through F2' */
+  if(step>=8){
+    var a8=hot(8)?0.75+0.25*pulse:0.5, c8=rgbs(255,140,200,a8);
+    var Q={x:P.B2.x,y:P.O2.y};
+    seg(P.B2,Q,c8,hot(8)?2.4:1.4,hot(8)?8:0,[6,4]); hs(P.B2,Q,'rayPar');
+    var dq=norm(P.F2p.x-Q.x,P.F2p.y-Q.y), LQ=(Q.y-yTop)/Math.max(-dq.y,0.15), endQ={x:Q.x+dq.x*LQ,y:Q.y+dq.y*LQ};
+    seg(Q,endQ,c8,hot(8)?2.4:1.4,hot(8)?8:0,[6,4]); hs(Q,endQ,'rayPar');
+    geo(P.B2.x+P.side*9,(P.B2.y+Q.y)/2+4,'②',P.side>0?'left':'right',rgbs(255,140,200,0.95),'700 13px '+MONO);
+    if(hot(8)){
+      var ang=Math.atan2(dq.y,dq.x), ys=[P.O2.y-g.F2*1.15, P.O2.y-g.F2*1.9];
+      for(var z=0;z<ys.length;z++){
+        if(ys[z]<yTop+6)continue;
+        var tq=(ys[z]-Q.y)/dq.y, tO=(ys[z]-P.O2.y)/dO.y;
+        arrowHead(Q.x+dq.x*tq,ys[z],ang,c8,9); arrowHead(P.O2.x+dO.x*tO,ys[z],ang,rgbs(190,150,255,0.95),9);
+      }
+      var ym=P.O2.y-g.F2*1.5, xm=Math.max(Q.x+dq.x*((ym-Q.y)/dq.y),P.O2.x+dO.x*((ym-P.O2.y)/dO.y));
+      if(P.side<0)xm=Math.min(Q.x+dq.x*((ym-Q.y)/dq.y),P.O2.x+dO.x*((ym-P.O2.y)/dO.y));
+      geo(xm+(P.side>0?-1:1)*0+(P.side>0?12:-12),ym,'① ∥ ②',P.side>0?'left':'right','rgba(234,242,255,.95)','700 12px '+MONO);
+    }
+  }
+  /* 9 : real rays emerge one after the other */
+  if(step>=9){
+    var U=R3.filter(function(r){return !r.blocked;});
+    for(var w=0;w<U.length;w++){
+      var f=step>9?1:clamp((state._stepT-0.3-0.6*w)/0.6,0,1); if(f<=0)continue;
+      var p3=U[w].pts[3], p4=U[w].pts[4], pe={x:p3.x+(p4.x-p3.x)*f,y:p3.y+(p4.y-p3.y)*f};
+      seg(p3,pe,'rgba(67,224,184,.95)',(hot(9)&&f<1)?2.6:1.8,hot(9)?8:4,null); hs(p3,pe,'rayOut');
+      if(hot(9)&&f<1){ctx.fillStyle='#e9fffa';ctx.beginPath();ctx.arc(pe.x,pe.y,3,0,TAU);ctx.fill();}
+    }
+  }
+  /* 10 : eye + alpha' */
+  if(step>=10){ drawEye(g); exitAngle(g,P,hot(10)); alphaAtS(g,false); }
+  if(step>=11) drawMedallions();
+}
+
+/* ================= HUD / readouts ================= */
+var RO={};
+var readouts=$('readouts'), dock=$('dock');
+function buildReadouts(){
+  var L=D();
+  var defs={
+   1:[['f1',L.ro_f1,'cyn'],['f2',L.ro_f2,'amb'],['G',L.ro_G,'tea'],['b',L.ro_b,'ink'],['gap',L.ro_gap,'cor']],
+   2:[['a',L.ro_a,'cyn'],['b',L.ro_b,'amb'],['G',L.ro_G,'tea'],['rap',L.ro_rap,'ink']],
+   3:[['a',L.ro_a,'cyn'],['b',L.ro_b,'amb'],['G',L.ro_G,'tea'],['step',L.ro_step,'ink']]
+  };
+  var html='';
+  for(var i=0;i<defs[state.view].length;i++){var d=defs[state.view][i];
+    html+='<div class="stat"><span class="s-l">'+d[1]+'</span><span class="s-v '+d[2]+'" id="ro-'+d[0]+'">—</span></div>';}
+  readouts.innerHTML=html; RO={};
+  for(var j=0;j<defs[state.view].length;j++){var id=defs[state.view][j][0];RO[id]=$('ro-'+id);}
+}
+function curOff(){return state.view===1?state.focus:((state.view===3&&state.step===STEP_L2)?state.l2off:0);}
+function alphaPrimeDeg(){
+  var den=state.f2+curOff(); if(den<=0.01)return 90;
+  return Math.atan(Math.abs(state.f1*Math.tan(state.alpha*DEG)/den))/DEG;
+}
+function updateReadouts(){
+  var L=D(), ap=alphaPrimeDeg(), Gs=fmt(Gval(),1)+L.u_x;
+  if(state.view===1){
+    setTxt(RO.f1,state.f1+L.u_mm); setTxt(RO.f2,state.f2+L.u_mm); setTxt(RO.G,Gs);
+    setTxt(RO.b,fmt(ap,1)+L.u_deg); setTxt(RO.gap,(state.focus>0?'+':'')+state.focus+L.u_mm);
+  } else if(state.view===2){
+    setTxt(RO.a,fmt(Math.abs(state.alpha),2)+L.u_deg); setTxt(RO.b,fmt(ap,1)+L.u_deg);
+    setTxt(RO.G,Gs); setTxt(RO.rap,fmt(Gval(),1));
+  } else {
+    setTxt(RO.a,fmt(Math.abs(state.alpha),2)+L.u_deg);
+    setTxt(RO.b,state.step>=7||(state.step===STEP_L2&&Math.abs(state.l2off)<0.5)?fmt(ap,1)+L.u_deg:'—');
+    setTxt(RO.G,state.step>=11?Gs:'—');
+    setTxt(RO.step,(state.step+1)+' / '+(stepMax()+1));
+  }
+}
+var indEl=$('ind'), indTxt=$('ind-txt');
+function statusFor(off){return Math.abs(off)<0.5?['run',D().ind_afocal]:(off>0?['warn',D().ind_conv]:['low',D().ind_div]);}
+function updateIndicator(){
+  var cls,txt, mx=stepMax()+1, s;
+  if(state.view===2){cls=state.playing?'run':'low';txt=t('ind_demo',{n:state.step+1,max:mx});}
+  else if(state.view===3){
+    if(state.step===STEP_L2){s=statusFor(Math.round(state.l2off*2)/2);cls=s[0];txt=s[1];}
+    else {cls='low';txt=t('ind_step',{n:state.step+1,max:mx});}
+  } else {s=statusFor(state.focus);cls=s[0];txt=s[1];}
+  var c='hud hud-indicator '+cls; if(indEl.className!==c)indEl.className=c; setTxt(indTxt,txt);
+}
+
+/* ================= flash ================= */
+var flashEl=$('flash'); var flashTO;
+function flash(m){flashEl.textContent=m;flashEl.classList.add('on');clearTimeout(flashTO);flashTO=setTimeout(function(){flashEl.classList.remove('on');},2400);}
+
+/* ================= step UI ================= */
+function buildDots(){
+  var h='';for(var i=0;i<=stepMax();i++)h+='<span data-s="'+i+'"></span>';
+  $('step-dots').innerHTML=h;
+  var sp=$('step-dots').children;
+  for(var j=0;j<sp.length;j++){(function(el){el.addEventListener('click',function(){goStep(+el.dataset.s);});})(sp[j]);}
+}
+function refreshStep(){
+  if(state.view===1)return;
+  var n=state.step, mx=stepMax();
+  setTxt($('step-count'), t('step_count',{n:n+1,max:mx+1}));
+  if(state.view===2){
+    $('step-text-t').textContent=D()['d'+n+'_t'];
+    $('step-text-d').className='st-d formula';
+    $('step-text-d').innerHTML=D()['d'+n+'_f'];
+  } else {
+    $('step-text-t').textContent=(n+1)+'. '+D()['s'+n+'_t'];
+    $('step-text-d').className='st-d';
+    $('step-text-d').textContent=t('s'+n+'_d',{f1:state.f1,f2:state.f2,G:fmt(Gval(),1)});
+  }
+  $('step-prev').disabled = n<=0;
+  $('step-next').disabled = n>=mx;
+  $('step-auto').hidden = state.view!==2;
+  $('step-replay').hidden = !(state.view===3 && n===STEP_L2);
+  var sp=$('step-dots').children;
+  for(var i=0;i<sp.length;i++){sp[i].className=i===n?'cur':(i<n?'done':'');}
+  updateFocusCtl(); autoZoom();
+}
+function slideOff(u){
+  var A=Math.min(15,0.5*state.f2), B=-Math.min(12,0.4*state.f2);
+  if(u<0.38)return A+(B-A)*ease(u/0.38);
+  if(u<0.52)return B;
+  if(u<0.9)return B*(1-ease((u-0.52)/0.38));
+  return 0;
+}
+function startSlide(){state.slide.on=true;state.slide.t=0;state.l2off=slideOff(0);syncFocusSlider();}
+function advanceSlide(dt){
+  var s=state.slide; s.t+=dt*state.speed/7;
+  if(s.t>=1){s.t=1;s.on=false;state.l2off=0;flash(t('f_par'));}
+  else state.l2off=slideOff(s.t);
+  syncFocusSlider();
+}
+function goStep(n){
+  var prev=state.step, mx=stepMax(); n=clamp(n,0,mx);
+  state.step=n; state._stepT=0;
+  if(state.view===3){
+    if(n===STEP_L2){ if(prev<STEP_L2) startSlide(); else {state.slide.on=false; state.l2off=0;} }
+    else {state.slide.on=false; state.l2off=0;}
+  }
+  refreshStep(); if(n!==prev)flash(t('f_step',{n:n+1}));
+}
+$('step-prev').addEventListener('click',function(){goStep(state.step-1);});
+$('step-next').addEventListener('click',function(){goStep(state.step+1);});
+$('step-auto').addEventListener('click',function(){togglePlay();});
+$('step-replay').addEventListener('click',function(){startSlide();});
+
+/* ================= pointer : hover + vertical drag of L2 ================= */
+function canDragL2(){return state.view===1||(state.view===3&&state.step===STEP_L2);}
+function overL2(mx,my){return G&&Math.abs(my-(G.cy-G.YL2))*CAM.k<14&&Math.abs(mx-G.xS2)<G.hl2+12/CAM.k;}
+var down=null;
+function evPos(e){var r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+function offMin(){return -Math.min(15,Math.floor(0.6*state.f2));}
+function dragTo(my){
+  if(!G)return;
+  var raw=((G.cy-my)-G.Ya)/G.ESC, off=clamp(Math.round(raw),offMin(),15);
+  if(Math.abs(raw)<1.2)off=0;
+  var prev=state.view===1?state.focus:state.l2off;
+  if(state.view===1)state.focus=off; else {state.slide.on=false;state.l2off=off;}
+  syncFocusSlider();
+  if(off===0&&Math.round(prev)!==0)flash(t('f_par'));
+}
+function toW(p){return {x:(p.x-CAM.tx)/CAM.k,y:(p.y-CAM.ty)/CAM.k};}
+cv.addEventListener('pointermove',function(e){var p=evPos(e);MOUSE.x=p.x;MOUSE.y=p.y;MOUSE.in=true;
+  if(state.dragging){dragTo(toW(p).y);if(down)down.moved=true;}
+  else if(down&&Math.hypot(p.x-down.x,p.y-down.y)>5)down.moved=true;});
+cv.addEventListener('pointerleave',function(){MOUSE.in=false;});
+cv.addEventListener('pointerdown',function(e){var p=evPos(e);MOUSE.x=p.x;MOUSE.y=p.y;MOUSE.in=true;down={x:p.x,y:p.y,moved:false};
+  var w=toW(p); if(canDragL2()&&overL2(w.x,w.y)){state.dragging=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();}});
+function endPointer(e){
+  var wasDrag=state.dragging; state.dragging=false;
+  if(down&&!down.moved&&!wasDrag&&state.view!==3)togglePlay();
+  down=null; if(e.pointerType!=='mouse')MOUSE.in=false;
+}
+cv.addEventListener('pointerup',endPointer);
+cv.addEventListener('pointercancel',function(){state.dragging=false;down=null;});
+
+/* ================= controls ================= */
+var slF1=$('sl-f1'),slF2=$('sl-f2'),slA=$('sl-a'),slFo=$('sl-focus'),slSp=$('sl-sp');
+var outF1=$('out-f1'),outF2=$('out-f2'),outA=$('out-a'),outFo=$('out-focus'),outSp=$('out-sp'),led=$('led');
+function paintRange(el){var p=(el.value-el.min)/(el.max-el.min)*100;el.style.setProperty('--fill',p+'%');}
+function fmtOff(v){v=Math.round(v);return (v>0?'+':'')+v+D().u_mm;}
+function syncFocusSlider(){
+  var v=state.view===3?state.l2off:state.focus;
+  slFo.value=Math.round(v); paintRange(slFo); outFo.textContent=fmtOff(v);
+}
+function updateFocusRange(){
+  slFo.min=offMin();
+  if(state.focus<offMin())state.focus=offMin();
+  if(state.l2off<offMin())state.l2off=offMin();
+  syncFocusSlider();
+}
+function updateFocusCtl(){
+  var on=state.view===1||(state.view===3&&state.step===STEP_L2);
+  $('ctl-focus').classList.toggle('off',!on);
+  syncFocusSlider();
+}
+function syncControls(){
+  outF1.textContent=state.f1+D().u_mm; outF2.textContent=state.f2+D().u_mm;
+  outA.textContent=fmt(state.alpha,2)+D().u_deg; syncFocusSlider();
+  $('hint').innerHTML=D()['hint'+state.view];
+}
+slF1.addEventListener('input',function(){state.f1=+slF1.value;outF1.textContent=state.f1+D().u_mm;refreshStep();flash(t('f_f1',{v:state.f1}));});
+slF2.addEventListener('input',function(){state.f2=+slF2.value;outF2.textContent=state.f2+D().u_mm;updateFocusRange();refreshStep();flash(t('f_f2',{v:state.f2}));});
+slA.addEventListener('input',function(){state.alpha=+slA.value;outA.textContent=fmt(state.alpha,2)+D().u_deg;flash(t('f_alpha',{v:fmt(state.alpha,2)}));});
+slFo.addEventListener('input',function(){
+  var v=+slFo.value;
+  if(state.view===1){state.focus=v;flash(v===0?t('f_par'):t('f_focus',{v:fmtOff(v)}));}
+  else if(state.view===3&&state.step===STEP_L2){state.slide.on=false;state.l2off=v;if(v===0)flash(t('f_par'));}
+  outFo.textContent=fmtOff(v);
+});
+slSp.addEventListener('input',function(){state.speed=+slSp.value;outSp.textContent='×'+fmt(state.speed,2);});
+
+['ray','foci','tube','eye','phot','tip'].forEach(function(k){$('tg-'+k).addEventListener('change',function(e){state.show[k]=e.target.checked;});});
+
+var btnPlay=$('btn-play'), btnFast=$('btn-fast');
+function setPlayUI(){
+  btnPlay.textContent=state.playing?D().btn_pause:D().btn_play;
+  btnPlay.disabled=state.view===3;
+  led.classList.toggle('paused',!state.playing);
+  $('step-auto-lbl').textContent=state.playing?D().step_stop:D().step_auto;
+  btnFast.textContent=state.view===1?D().btn_demo:D().btn_end;
+  btnFast.classList.toggle('on',state.view===1&&state.fast);
+}
+function togglePlay(){
+  if(state.view===3)return;
+  state.playing=!state.playing;
+  if(state.view===2 && state.playing){ if(state.step>=stepMax()){state.step=0;refreshStep();} state._stepT=0; }
+  setPlayUI();
+}
+btnPlay.addEventListener('click',togglePlay);
+addEventListener('keydown',function(ev){
+  var tag=(ev.target&&ev.target.tagName)||'';
+  if(tag==='INPUT'||(tag==='BUTTON'&&ev.code==='Space'))return;
+  if(ev.code==='Space'){ev.preventDefault();togglePlay();}
+  else if((state.view===2||state.view===3)&&ev.code==='ArrowRight'){ev.preventDefault();goStep(state.step+1);}
+  else if((state.view===2||state.view===3)&&ev.code==='ArrowLeft'){ev.preventDefault();goStep(state.step-1);}
+});
+$('btn-reset').addEventListener('click',function(){
+  if(state.view===2||state.view===3){ state.playing=false; goStep(0); setPlayUI(); }
+  else { state.playing=false; state.focus=0; syncFocusSlider(); setPlayUI();
+    for(var i=0;i<state.photons.length;i++){state.photons[i].s=((i%3)/3+Math.floor(i/3)*0.08)%1;} }
+  flash(t('f_reset'));
+});
+btnFast.addEventListener('click',function(){
+  if(state.view===2||state.view===3){ state.playing=false; goStep(stepMax()); setPlayUI(); flash(t('f_done')); }
+  else { state.fast=!state.fast; setPlayUI(); flash(state.fast?t('f_fast_on'):t('f_fast_off')); }
+});
+
+var lawK=$('law-k'),lawT=$('law-t'),lawD=$('law-d');
+function refreshViewText(){lawK.textContent=t('view_k',{n:state.view});lawT.textContent=D()['v'+state.view+'_t'];lawD.textContent=D()['v'+state.view+'_d'];$('hint').innerHTML=D()['hint'+state.view];}
+function setView(n){
+  state.view=n;
+  var bs=document.querySelectorAll('.tabs button');
+  for(var i=0;i<bs.length;i++){bs[i].classList.toggle('active',+bs[i].dataset.view===n);}
+  var steps=(n===2||n===3);
+  $('hud-step').hidden=!steps; dock.classList.toggle('compact',!steps);
+  state.step=0; state._stepT=0; state.slide.on=false; state.l2off=0; state.zoom=false; state._zkey=n+':0'; setZoomUI();
+  state.playing=(n===2);
+  buildDots(); setPlayUI(); refreshViewText(); buildReadouts();
+  if(steps) refreshStep(); else updateFocusCtl();
+  requestAnimationFrame(updateBand);
+}
+(function(){var bs=document.querySelectorAll('.tabs button');for(var i=0;i<bs.length;i++){(function(b){b.addEventListener('click',function(){setView(+b.dataset.view);});})(bs[i]);}})();
+(function(){var rs=document.querySelectorAll('input[type=range]');for(var i=0;i<rs.length;i++){(function(el){paintRange(el);el.addEventListener('input',function(){paintRange(el);});})(rs[i]);}})();
+
+/* ================= language ================= */
+function applyLang(){
+  document.documentElement.lang=state.lang==='fr'?'fr':'en';
+  var a=document.querySelectorAll('[data-i18n]');for(var i=0;i<a.length;i++){var k=a[i].getAttribute('data-i18n');if(D()[k]!=null)a[i].textContent=D()[k];}
+  var b=document.querySelectorAll('[data-i18n-html]');for(var j=0;j<b.length;j++){var k2=b[j].getAttribute('data-i18n-html');if(D()[k2]!=null)b[j].innerHTML=D()[k2];}
+  $('btn-reset').textContent=D().btn_reset; outSp.textContent='×'+fmt(state.speed,2);
+  $('lang-lbl').textContent=state.lang==='fr'?'EN · English':'FR · Français';
+  document.title=state.lang==='fr'?'Télescope de Newton — Simulation':'Newtonian telescope — Simulation';
+  tipEl.__h=null;
+  refreshViewText();syncControls();buildReadouts();refreshStep();setPlayUI();setZoomUI();
+}
+$('lang').addEventListener('click',function(){state.lang=state.lang==='fr'?'en':'fr';applyLang();flash(t('f_lang'));});
+
+/* ================= camera (zoom on the eyepiece) ================= */
+function camTarget(){
+  var T0={k:1,tx:0,ty:0};
+  if(!state.zoom)return T0;
+  var g=geomFor(curOff()); if(!g)return T0;
+  var Ymin=g.hImg-0.55*g.F2-14, Ymax=g.Yeye+28, top=48, bot=cssH-18;
+  var k=clamp((bot-top)/(Ymax-Ymin),1,3.4);
+  return {k:k, tx:cssW*0.6-k*g.xS2, ty:top-k*(g.cy-Ymax)};
+}
+function updateCam(dt){var T1=camTarget(),a=Math.min(1,dt*5);CAM.k+=(T1.k-CAM.k)*a;CAM.tx+=(T1.tx-CAM.tx)*a;CAM.ty+=(T1.ty-CAM.ty)*a;}
+function setZoomUI(){$('zoom-lbl').textContent=state.zoom?D().zoom_out:D().zoom_in;$('btn-zoom').classList.toggle('on',state.zoom);}
+function autoZoom(){var k=state.view+':'+state.step; if(k===state._zkey)return; state._zkey=k;
+  state.zoom=(state.view===3&&state.step>=STEP_L2&&state.step<=10)||(state.view===2&&(state.step===2||state.step===3)); setZoomUI();}
+$('btn-zoom').addEventListener('click',function(e){e.stopPropagation();state.zoom=!state.zoom;setZoomUI();});
+
+/* ================= loop ================= */
+var last=performance.now();
+function loop(tt){
+  var dt=Math.min((tt-last)/1000,0.05);last=tt;
+  if(state.view===3){
+    state._stepT+=dt;
+    if(state.step===STEP_L2&&state.slide.on&&!state.dragging)advanceSlide(dt);
+  }
+  if(state.playing){
+    if(state.view===2){
+      state._stepT+=dt;
+      if(state._stepT>=2.8){ state._stepT=0;
+        if(state.step<stepMax()){ state.step++; refreshStep(); }
+        else { state.playing=false; setPlayUI(); flash(t('f_done')); }
+      }
+    }
+    if((state.view===1||state.view===2) && state.show.phot){
+      var v=0.12*state.speed*(state.fast?6:1);
+      for(var i=0;i<state.photons.length;i++){state.photons[i].s=(state.photons[i].s+v*dt)%1;}
+    }
+  }
+  drawBg(tt);
+  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,cssW,cssH);
+  updateCam(dt);
+  ctx.setTransform(DPR*CAM.k,0,0,DPR*CAM.k,DPR*CAM.tx,DPR*CAM.ty);
+  LWS=Math.pow(CAM.k,-0.7); FZS=Math.pow(CAM.k,-0.62);
+  HOT=[];
+  if(state.view===1)drawView1(); else if(state.view===2)drawView2(); else drawStepView();
+  pickHover(); drawHover(); ctx.setTransform(DPR,0,0,DPR,0,0); LWS=1; FZS=1; updateTip(); updateCursor();
+  updateReadouts();updateIndicator();
+  requestAnimationFrame(loop);
+}
+
+setView(1); applyLang(); setPlayUI(); updateFocusRange();
+flash(t('f_ready'));
+requestAnimationFrame(loop);
+window.__TEL_OK__=true;
+</script>
+<script>
+if(!window.__TEL_OK__){document.body.insertAdjacentHTML('beforeend',
+ '<div style="position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:#5b1420;color:#ffd9d9;border:1px solid #ff7a59;padding:12px 16px;border-radius:8px;font:600 14px monospace;box-shadow:0 6px 30px rgba(0,0,0,.6)">⚠ TRUNCATED FILE / FICHIER TRONQUÉ — the copy is incomplete. The last line must be &lt;/html&gt;.</div>');}
+</script>
+</body>
+</html>
